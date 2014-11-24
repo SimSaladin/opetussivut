@@ -24,5 +24,7 @@ executable opetussivut
                      , containers
                      , http-conduit
                      , xml-conduit
+                     , shakespeare
+                     , blaze-markup
   -- hs-source-dirs:      
   default-language:    Haskell2010
