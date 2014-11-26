@@ -26,5 +26,7 @@ executable opetussivut
                      , xml-conduit
                      , shakespeare
                      , blaze-markup
+                     , blaze-html
+                     , regex-compat
   -- hs-source-dirs:      
   default-language:    Haskell2010
