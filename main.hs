@@ -45,6 +45,7 @@ url = "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId=" +
 -- | Columns in source
 colLang = "opetuskieli"
 colCode = "Koodi"
+colLangFi = "kieli-fi"
 colCourseName = "Kurssin nimi"
 colWebsite = "Kotisivu"
 colPeriod = "Periodi"
@@ -79,20 +80,20 @@ categories =
 -- | How to render the data
 listed :: Table -> Html
 listed (Table _ stuff) = [shamlet|
-\<!-- title: Testi -->
+\<!-- title: Kaikki kurssit -->
 \<!-- fi (Suomenkielinen versio): /opetus/testi.html -->
 \<!-- se (Institutionens hemsida): /svenska/studierna/index.html -->
 \<!-- en (English version): /english/studying/index.html -->
 \ 
 <p>
-  Kieli
+  Kieli:&nbsp;
   <select id="select-kieli" name="kieli" onchange="updateList(this)">
      <option value="any">Kaikki
      <option value="fi">Suomeksi
      <option value="en">Englanniksi
      <option value="se">Ruotsiksi
 
-  Taso
+  Taso:&nbsp;
   <select id="select-taso" name="taso" onchange="updateList(this)">
      <option value="any">Kaikki
      <option value="Perusopinnot">Perusopinnot
@@ -100,14 +101,14 @@ listed (Table _ stuff) = [shamlet|
      <option value="Muut opinnot">Muut opinnot
      <option value="Syventävät opinnot">Syventävät
 
-  Lukukausi
+  Lukukausi:&nbsp;
   <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
      <option value="any">Kaikki
      <option value="kevät">Kevät
      <option value="syksy">Syksy
      <option value="kesä">Kesä
 <p>
-  Klikkaa kurssikoodista Weboodiin
+  Klikkaa kurssikoodista Weboodiin.
 
 $forall main <- L.groupBy mainCategory stuff
   <div.courses>
@@ -115,7 +116,7 @@ $forall main <- L.groupBy mainCategory stuff
     $forall subs <- L.groupBy subCategory main
       <div.courses>
         <h2>#{subCat $ head subs}
-        <table style="width:100%;margin-left:0">
+        <table style="width:100%">
           $forall c <- subs
             <tr data-taso="#{mainCat c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}">
               <td style="width:10%">
@@ -129,7 +130,7 @@ $forall main <- L.groupBy mainCategory stuff
                 #{getThing colPeriod c}
 
               <td style="width:20%">
-                #{getThing colLang c}
+                #{getThing colLangFi c}
                 $maybe p <- getThingMaybe colWebsite c
                   <a href="#{p}">Kotisivu
 
@@ -223,37 +224,39 @@ accumCategory :: Category -> [Category] -> [Category]
 accumCategory c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
     where ci = L.find (isJust . L.find (`T.isPrefixOf` c)) categories
 
--- | A row is either a category or course
-getRow :: [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
-getRow hs cats = go . map ($// content) -- ($// content)
-    where go :: [[Text]] -> ([Category], Maybe Course)
-          go (mc : vs) = case toCategory (head mc) of
-                Just cat -> (accumCategory cat cats, Nothing)
-                Nothing  -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
-
 toCategory :: Text -> Maybe Category
 toCategory t = do guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
+                  guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
                   return $ normalize t
 
 toCourse :: [Category] -> [Header] -> [Text] -> Course
-toCourse cats hs xs = (cats, Map.adjust toLang colLang $ Map.insert colLukukausi lukukausi vals)
+toCourse cats hs xs = (cats, Map.adjust toLang colLang $ Map.insert colLangFi fiLangs $ Map.insert colLukukausi lukukausi vals)
   where vals      = Map.fromList $ zip hs $ map normalize xs
-        lukukausi = case Map.lookup colPeriod vals of
-                        Nothing -> "syksy, kevät"
-                        Just x | x == "I"   || x == "II" || x == "I-II" -> "syksy"
-                               | x == "III" || x == "IV" || x == "III-IV" -> "kevät"
-                               | x == "V"    -> "kesä"
-                               | x == "I-IV" -> "syksy, kevät"
-                               | "kevät" `T.isInfixOf` x -> "kevät"
-                               | "syksy" `T.isInfixOf` x -> "syksy"
-                               | "kesä"  `T.isInfixOf` x -> "kesä"
-                               | otherwise -> "syksy, kevät"
+
+        lukukausi = fromMaybe "syksy, kevät" $ Map.lookup colPeriod vals >>= toLukukausi
+        toLukukausi x
+            | x == "I"   || x == "II" || x == "I-II"   = Just "syksy"
+            | x == "III" || x == "IV" || x == "III-IV" = Just "kevät"
+            | x == "V"                                 = Just "kesä"
+            | x == "I-IV"                              = Just "syksy, kevät"
+            | "kevät" `T.isInfixOf` x                  = Just "kevät"
+            | "syksy" `T.isInfixOf` x                  = Just "syksy"
+            | "kesä"  `T.isInfixOf` x                  = Just "kesä"
+            | otherwise                                = Nothing
+
         toLang x | x == "suomi" = "fi"
+                 | "suomi" `T.isInfixOf` x, "eng" `T.isInfixOf` x = "fi, en"
                  | "eng" `T.isInfixOf` x = "en"
-                 | "suomi" `T.isInfixOf` x && "eng" `T.isInfixOf` x = "fi, en"
                  | otherwise = "fi, en, se"
 
-normalize = T.unwords . map (T.unwords . T.words) . T.lines
+        fiLangs = case Map.lookup colLang vals of
+                      Just x  -> x -- T.replace "fi" "suomi" $ T.replace "en" "englanti" $ T.replace "se" "ruotsi" x
+                      Nothing -> "?"
+
+normalize =
+    T.dropAround (`elem` " ,-!")
+    . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
+    . T.unwords . map (T.unwords . T.words) . T.lines
 
 -- * Fetch
 
@@ -289,13 +292,23 @@ processTable c = table
             in Just $ Table headers courses
         _ -> Nothing
 
+-- | A row is either a category or course
+getRow :: [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
+getRow hs cats = go . map ($// content) -- ($// content)
+    where go :: [[Text]] -> ([Category], Maybe Course)
+          go (mc : vs) = case toCategory (head mc) of
+                Just cat -> (accumCategory cat cats, Nothing)
+                Nothing | null vs                      -> (cats, Nothing)
+                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
+                        | otherwise                    -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
+
 -- * Output
 
 renderTable :: Table -> IO ()
 renderTable t@(Table hs cs) = LT.putStrLn $ renderMarkup $ listed t
 
 getThing :: Text -> Course -> Text
-getThing k c = fromMaybe ("Key not found: " <> k) $ getThingMaybe k c
+getThing k c = fromMaybe (traceShow (k, c) $ "Key not found: " <> k) $ getThingMaybe k c
 
 getThingMaybe :: Text -> Course -> Maybe Text
 getThingMaybe k (_, c) = Map.lookup k c
