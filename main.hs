@@ -8,6 +8,19 @@
 -- Maintainer     : Samuli Thomasson <samuli.thomasson@paivola.fi>
 -- Stability      : experimental
 -- Portability    : non-portable
+-- 
+--     /opetus/index.html
+--     /svenska/studierna/index.body
+--     /english/studying/index.body
+--
+--     /opetus/kurssit.html
+--     /svenska/studierna/kurser.body
+--     /english/studying/courses.body
+--
+--     /opetus/kurssit/{aineopinnot,perusopinnot,muutopinnot,syventavatopinnot}.body
+--     /svenska/studierna/{...}.body
+--     /english/studying/{...}.body
+--
 ------------------------------------------------------------------------------
 module Main where
 
@@ -42,14 +55,43 @@ pageId = "133436923"
 url :: String
 url = "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId=" ++ pageId
 
--- | Columns in source
-colLang = "opetuskieli"
-colCode = "Koodi"
-colLangFi = "kieli-fi"
+-- | Columns in source table
+colLang       = "opetuskieli"
+colCode       = "Koodi"
+colLangFi     = "kieli-fi"
 colCourseName = "Kurssin nimi"
-colWebsite = "Kotisivu"
-colPeriod = "Periodi"
-colLukukausi = "Lukukausi" -- kevät, kesä, syksy
+colWebsite    = "Kotisivu"
+colPeriod     = "Periodi"
+colLukukausi  = "Lukukausi" -- kevät, kesä, syksy
+
+-- List of categories
+categories :: [[Text]]
+categories =
+    [ [ "Perusopinnot", "Aineopinnot", "Syventävät opinnot", "Muut opinnot" ]
+    , [ "Pääaineopetus" ]
+    , [ "Pakolliset opinnot", "Valinnaiset opinnot" ]
+    , [ "1. ", "2. ", "3. ", "4.", "5. ", "6. ", "7. ", "8. ", "9. " ]
+    , [ "A. ", "B. " ]
+    , [ "kevät", "syksy" ]
+    ]
+
+-- | A hack, for confluence html is far from the (strictly) spec.
+regexes :: [String -> String]
+regexes =
+    [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
+    -- , rm "<meta [^>]*>", rm "<meta [^>]*\">"
+    -- , rm "<br[^>]*>", rm "<input [^>]*>"
+    -- , rm "</?ol[^>]*>", rm "</?li[^>]*>", rm "</?ul[^>]*>"
+    -- , rm "<div id=\"footer\".*section>[^<]*</div>"
+    ] where rm s i = subRegex (mkRegexWithOpts s False True) i ""
+
+-- * Main
+
+main :: IO ()
+main = do
+    txt <- readFile "raw.html"
+    let doc = XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
+    processDoc doc
 
 -- | Source table
 data Table = Table [Header] [Course] deriving (Show, Read)
@@ -62,24 +104,14 @@ type Category = Text
 -- | Row is source table
 type Course = ([Category], Map Header ContentBlock)
 
-main = do
-    txt <- readFile "raw.html"
-    let doc = XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
-    processDoc doc
+-- * HTML
 
-categories :: [[Text]]
-categories =
-    [ [ "Perusopinnot", "Aineopinnot", "Syventävät opinnot", "Muut opinnot" ]
-    , [ "Pääaineopetus" ]
-    , [ "Pakolliset opinnot", "Valinnaiset opinnot" ]
-    , [ "1. ", "2. ", "3. ", "4.", "5. ", "6. ", "7. ", "8. ", "9. " ]
-    , [ "A. ", "B. " ]
-    , [ "kevät", "syksy" ]
-    ]
+renderTable :: Table -> IO ()
+renderTable t@(Table hs cs) = LT.putStrLn $ renderMarkup $ tableBody t
 
 -- | How to render the data
-listed :: Table -> Html
-listed (Table _ stuff) = [shamlet|
+tableBody :: Table -> Html
+tableBody (Table _ stuff) = [shamlet|
 \<!-- title: Kaikki kurssit -->
 \<!-- fi (Suomenkielinen versio): /opetus/testi.html -->
 \<!-- se (Institutionens hemsida): /svenska/studierna/index.html -->
@@ -138,30 +170,9 @@ $forall main <- L.groupBy mainCategory stuff
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
 
--- | Level one category
-mainCat :: Course -> Text
-mainCat (cats, _)
-    | Just c <- L.find (`elem` (categories !! 0)) cats = c
-    | otherwise = "(Tuntematon)"
-
-subCat :: Course -> Text
-subCat (cats, _)
-    | Just c <- L.find (maybe False (`elem` ['0'..'9']) . fmap fst . T.uncons) cats = c
-    | otherwise = "Fysiikka"
-    -- ^ TODO this thing makes no sense whatsoever
-
--- | A hack, for confluence html is far from the (strictly) spec.
-regexes :: [String -> String]
-regexes =
-    [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
-    -- , rm "<meta [^>]*>", rm "<meta [^>]*\">"
-    -- , rm "<br[^>]*>", rm "<input [^>]*>"
-    -- , rm "</?ol[^>]*>", rm "</?li[^>]*>", rm "</?ul[^>]*>"
-    -- , rm "<div id=\"footer\".*section>[^<]*</div>"
-    ] where rm s i = subRegex (mkRegexWithOpts s False True) i ""
-
 -- * JS
 
+--
 jsLogic = [julius|
 
 fs = { };
@@ -216,18 +227,7 @@ updateHiddenDivs = function() {
 }
 |]
 
--- * Parse and build
-
--- | Accumulate a category to list of categories based on what categories
--- cannot overlap
-accumCategory :: Category -> [Category] -> [Category]
-accumCategory c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
-    where ci = L.find (isJust . L.find (`T.isPrefixOf` c)) categories
-
-toCategory :: Text -> Maybe Category
-toCategory t = do guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
-                  guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
-                  return $ normalize t
+-- * Courses and categories
 
 toCourse :: [Category] -> [Header] -> [Text] -> Course
 toCourse cats hs xs = (cats, Map.adjust toLang colLang $ Map.insert colLangFi fiLangs $ Map.insert colLukukausi lukukausi vals)
@@ -258,14 +258,46 @@ normalize =
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
     . T.unwords . map (T.unwords . T.words) . T.lines
 
--- * Fetch
+-- | Accumulate a category to list of categories based on what categories
+-- cannot overlap
+accumCategory :: Category -> [Category] -> [Category]
+accumCategory c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
+    where ci = L.find (isJust . L.find (`T.isPrefixOf` c)) categories
+
+toCategory :: Text -> Maybe Category
+toCategory t = do guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
+                  guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
+                  return $ normalize t
+
+getThing :: Text -> Course -> Text
+getThing k c = fromMaybe (traceShow (k, c) $ "Key not found: " <> k) $ getThingMaybe k c
+
+-- | Level one category
+mainCat :: Course -> Text
+mainCat (cats, _)
+    | Just c <- L.find (`elem` (categories !! 0)) cats = c
+    | otherwise = "(Tuntematon)"
+
+subCat :: Course -> Text
+subCat (cats, _)
+    | Just c <- L.find (maybe False (`elem` ['0'..'9']) . fmap fst . T.uncons) cats = c
+    | otherwise = "Fysiikka"
+    -- ^ TODO this thing makes no sense whatsoever
+
+getThingMaybe :: Text -> Course -> Maybe Text
+getThingMaybe k (_, c) = Map.lookup k c
+
+mainCategory, subCategory :: Course -> Course -> Bool
+mainCategory = (==) `on` mainCat
+subCategory = (==) `on` subCat
+
+-- * Get source
 
 getData :: String -> IO XML.Document
 getData = liftM (XML.parseLBS_ parseSettings) . simpleHttp
-
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
--- * Cursor
+-- ** Process fetched
 
 processDoc :: XML.Document -> IO ()
 processDoc = renderTable . head . catMaybes . findTable . fromDocument
@@ -302,22 +334,7 @@ getRow hs cats = go . map ($// content) -- ($// content)
                         | T.null (normalize (head mc)) -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
                         | otherwise                    -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
 
--- * Output
-
-renderTable :: Table -> IO ()
-renderTable t@(Table hs cs) = LT.putStrLn $ renderMarkup $ listed t
-
-getThing :: Text -> Course -> Text
-getThing k c = fromMaybe (traceShow (k, c) $ "Key not found: " <> k) $ getThingMaybe k c
-
-getThingMaybe :: Text -> Course -> Maybe Text
-getThingMaybe k (_, c) = Map.lookup k c
-
-mainCategory, subCategory :: Course -> Course -> Bool
-mainCategory = (==) `on` mainCat
-subCategory = (==) `on` subCat
-
--- * debugging
+-- * Debugging
 
 ppCourse :: Course -> IO ()
 ppCourse (cats, vals) = do
