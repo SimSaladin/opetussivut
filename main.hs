@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE QuasiQuotes #-}
 ------------------------------------------------------------------------------
 -- | 
@@ -9,11 +10,7 @@
 -- Stability      : experimental
 -- Portability    : non-portable
 -- 
---     /opetus/index.html
---     /svenska/studierna/index.body
---     /english/studying/index.body
---
---     /opetus/kurssit.html
+--     /opetus/kurssit.body
 --     /svenska/studierna/kurser.body
 --     /english/studying/courses.body
 --
@@ -48,6 +45,8 @@ import Text.Regex
 import Text.Blaze.Html (preEscapedToHtml)
 import Text.Blaze.Renderer.Text (renderMarkup)
 
+-- * Configuration
+
 -- | Page to fetch
 pageId = "133436923"
 
@@ -75,6 +74,36 @@ categories =
     , [ "kevät", "syksy" ]
     ]
 
+data Lang = Fi | En | Se
+          deriving (Show, Read, Eq, Ord)
+
+i18n :: Map Text (Map Lang Text)
+i18n = Map.fromList
+    [ ("Perusopinnot",       Map.fromList [ (En, "Basic studies"), (Se, "Grundstudier") ])
+    , ("Aineopinnot",        Map.fromList [ (En, "Intermediate studies"), (Se, "Ämnesstudier") ])
+    , ("Syventävät opinnot", Map.fromList [ (En, "Advanced studies"), (Se, "Advancerade studier") ])
+    , ("Muut opinnot",       Map.fromList [ (En, "Other studies"), (Se, "Andra studier") ])
+
+    , ("Kaikki",       Map.fromList [ (En, "All"), (Se, "Allt") ])
+    , ("Kieli",        Map.fromList [ (En, "Language"), (Se, "Språk") ])
+    , ("Kevät",        Map.fromList [ (En, "Spring"), (Se, "Vår") ])
+    , ("Syksy",        Map.fromList [ (En, "Autumn"), (Se, "Höst") ])
+    , ("Kesä",         Map.fromList [ (En, "Summer"), (Se, "Sommar") ])
+    , ("Kurssin nimi", Map.fromList [ (En, "Course name"), (Se, "Kursnamn") ])
+    , ("Lukukausi",    Map.fromList [ (En, "Semester"), (Se, "Termin") ])
+    , ("Taso",         Map.fromList [ (En, "Level"), (Se, "Level") ])
+
+    , ("Englanniksi", Map.fromList [ (En, "In English"), (Se, "På engelska") ])
+    , ("Suomeksi",    Map.fromList [ (En, "In Finnish"), (Se, "På finska") ])
+    , ("Ruotsiksi",   Map.fromList [ (En, "In Swedish"), (Se, "På svenska") ])
+
+    -- Titles
+    , ("Kaikki kurssit", Map.fromList [ (En, "All courses"), (Se, "Alla kurser") ])
+
+    -- urls
+    , ("/opetus/kurssit", Map.fromList [ (En, "/english/studying/courses"), (Se, "/svenska/studierna/kurser") ])
+    ]
+
 -- | A hack, for confluence html is far from the (strictly) spec.
 regexes :: [String -> String]
 regexes =
@@ -85,78 +114,94 @@ regexes =
     -- , rm "<div id=\"footer\".*section>[^<]*</div>"
     ] where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
+pages     = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
+languages = [Fi, En, Se]
+toPath    = T.unpack . ("testi" <>) . (<> ".body")
+
 -- * Main
 
 main :: IO ()
 main = do
     txt <- readFile "raw.html"
-    let doc = XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
-    processDoc doc
+    let doc   = XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
+        table = parseTable doc
+    forM_ pages $ \(title, url, f) ->
+        forM_ languages $ \lang ->
+            renderTable lang title url (f table) (toPath $ toLang i18n lang url)
+
+-- * Types
 
 -- | Source table
 data Table = Table [Header] [Course] deriving (Show, Read)
+
 -- | td in source table
 type ContentBlock = Text
+
 -- | Column headers in source table
 type Header = Text
+
 -- | First column in source table
 type Category = Text
+
 -- | Row is source table
 type Course = ([Category], Map Header ContentBlock)
 
 -- * HTML
 
-renderTable :: Table -> IO ()
-renderTable t@(Table hs cs) = LT.putStrLn $ renderMarkup $ tableBody t
+renderTable :: Lang -> Text -> Text -> Table -> FilePath -> IO ()
+renderTable lang title url table fp =
+    LT.writeFile fp $ renderMarkup $ tableBody lang title url table
 
 -- | How to render the data
-tableBody :: Table -> Html
-tableBody (Table _ stuff) = [shamlet|
-\<!-- title: Kaikki kurssit -->
-\<!-- fi (Suomenkielinen versio): /opetus/testi.html -->
-\<!-- se (Institutionens hemsida): /svenska/studierna/index.html -->
-\<!-- en (English version): /english/studying/index.html -->
+tableBody :: Lang -> Text -> Text -> Table -> Html
+tableBody lang title url (Table _ stuff) =
+        let ii = toLang i18n lang
+            in [shamlet|
+\<!-- title: #{ii title} -->
+\<!-- fi (Suomenkielinen versio): #{toLang i18n Fi url}.html -->
+\<!-- se (Svensk version): #{toLang i18n Se url}.html -->
+\<!-- en (English version): #{toLang i18n En url}.html -->
 \ 
 <p>
-  Kieli:&nbsp;
+  #{ii "Kieli"}:&nbsp;
   <select id="select-kieli" name="kieli" onchange="updateList(this)">
-     <option value="any">Kaikki
-     <option value="fi">Suomeksi
-     <option value="en">Englanniksi
-     <option value="se">Ruotsiksi
+     <option value="any">#{ii "Kaikki"}
+     <option value="fi" >#{ii "Suomeksi"}
+     <option value="en" >#{ii "Englanniksi"}
+     <option value="se" >#{ii "Ruotsiksi"}
 
-  Taso:&nbsp;
+  #{ii "Taso"}:&nbsp;
   <select id="select-taso" name="taso" onchange="updateList(this)">
-     <option value="any">Kaikki
-     <option value="Perusopinnot">Perusopinnot
-     <option value="Aineopinnot">Aineopinnot
-     <option value="Muut opinnot">Muut opinnot
-     <option value="Syventävät opinnot">Syventävät
+     <option value="any"               >#{ii "Kaikki"}
+     <option value="Perusopinnot"      >#{ii "Perusopinnot"}
+     <option value="Aineopinnot"       >#{ii "Aineopinnot"}
+     <option value="Muut opinnot"      >#{ii "Muut opinnot"}
+     <option value="Syventävät opinnot">#{ii "Syventävät opinnot"}
 
-  Lukukausi:&nbsp;
+  #{ii "Lukukausi"}:&nbsp;
   <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
-     <option value="any">Kaikki
-     <option value="kevät">Kevät
-     <option value="syksy">Syksy
-     <option value="kesä">Kesä
+     <option value="any"   >#{ii "Kaikki"}
+     <option value="kevät" >#{ii "Kevät"}
+     <option value="syksy" >#{ii "Syksy"}
+     <option value="kesä"  >#{ii "Kesä"}
 <p>
-  Klikkaa kurssikoodista Weboodiin.
+  #{ii "Klikkaa kurssikoodista Weboodiin"}.
 
 $forall main <- L.groupBy mainCategory stuff
   <div.courses>
-    <h1>#{mainCat $ head main}
+    <h1>#{ii $ mainCat $ head main}
     $forall subs <- L.groupBy subCategory main
       <div.courses>
-        <h2>#{subCat $ head subs}
+        <h2>#{ii $ subCat $ head subs}
         <table style="width:100%">
           $forall c <- subs
             <tr data-taso="#{mainCat c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}">
               <td style="width:10%">
                 <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
-                  <b>#{getThing colCode c} 
+                  <b>#{getThing colCode c}
 
               <td style="width:62%">
-                #{getThing colCourseName c}
+                #{getThingLang lang colCourseName c}
 
               <td style="width:7%">
                 #{getThing colPeriod c}
@@ -164,11 +209,23 @@ $forall main <- L.groupBy mainCategory stuff
               <td style="width:20%">
                 #{getThing colLangFi c}
                 $maybe p <- getThingMaybe colWebsite c
-                  <a href="#{p}">Kotisivu
+                  <a href="#{p}">#{ii "Kotisivu"}
 
 <script type="text/javascript">
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
+
+toLang :: Map Text (Map Lang Text) -> Lang -> Text -> Text
+toLang db lang key = case Map.lookup key db of
+    Just db' -> case Map.lookup lang db' of
+        Just val -> val
+        Nothing
+            | lang == Fi -> key
+            | otherwise  -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ show lang ++ "'") key
+    Nothing -> trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key
+
+getThingLang :: Lang -> Text -> Course -> Text
+getThingLang lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang i18n lang key) c
 
 -- * JS
 
@@ -270,7 +327,7 @@ toCategory t = do guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
                   return $ normalize t
 
 getThing :: Text -> Course -> Text
-getThing k c = fromMaybe (traceShow (k, c) $ "Key not found: " <> k) $ getThingMaybe k c
+getThing k c = fromMaybe (traceShow ("Key not found", k, c) $ "Key not found: " <> k) $ getThingMaybe k c
 
 -- | Level one category
 mainCat :: Course -> Text
@@ -297,10 +354,10 @@ getData :: String -> IO XML.Document
 getData = liftM (XML.parseLBS_ parseSettings) . simpleHttp
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
--- ** Process fetched
+-- ** Parse fetched
 
-processDoc :: XML.Document -> IO ()
-processDoc = renderTable . head . catMaybes . findTable . fromDocument
+parseTable :: XML.Document -> Table
+parseTable = head . catMaybes . findTable . fromDocument
 
 findTable :: Cursor -> [Maybe Table]
 findTable c = map ($| processTable) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
