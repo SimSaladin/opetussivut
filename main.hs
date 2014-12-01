@@ -22,28 +22,28 @@
 module Main where
 
 import Prelude
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Monoid ((<>))
-import Data.Function (on)
-import Control.Monad
-import Text.Printf
-import Data.Maybe
-import Network.HTTP.Conduit (simpleHttp)
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.IO as LT
-import qualified Data.List as L
-import qualified Text.XML as XML
-import Text.XML.Cursor
-import Debug.Trace
-import Text.Hamlet
-import Text.Julius
-import Text.Regex
-import Text.Blaze.Html (preEscapedToHtml)
-import Text.Blaze.Renderer.Text (renderMarkup)
+import           Control.Monad
+import           Data.Function              (on)
+import qualified Data.List          as L
+import           Data.Map                   (Map)
+import qualified Data.Map           as Map
+import           Data.Maybe
+import           Data.Monoid                ((<>))
+import           Data.Text                  (Text)
+import qualified Data.Text          as T
+import qualified Data.Text.IO       as T
+import qualified Data.Text.Lazy     as LT
+import qualified Data.Text.Lazy.IO  as LT
+import           Network.HTTP.Conduit       (simpleHttp)
+import           Text.Printf
+import           Text.Blaze.Html            (preEscapedToHtml)
+import           Text.Blaze.Renderer.Text   (renderMarkup)
+import           Text.Hamlet
+import           Text.Julius
+import           Text.Regex
+import qualified Text.XML           as XML
+import           Text.XML.Cursor
+import           Debug.Trace
 
 -- * Configuration
 
@@ -114,9 +114,11 @@ regexes =
     -- , rm "<div id=\"footer\".*section>[^<]*</div>"
     ] where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
-pages     = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
-languages = [Fi, En, Se]
-toPath    = T.unpack . ("testi" <>) . (<> ".body")
+pages      = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
+languages  = [Fi, En, Se]
+toPath     = ("testi" <>)
+toUrlPath  = ("/opetus/" <>) . toPath . (<> ".html")
+toFilePath = T.unpack . toPath . (<> ".body")
 
 -- * Main
 
@@ -127,7 +129,7 @@ main = do
         table = parseTable doc
     forM_ pages $ \(title, url, f) ->
         forM_ languages $ \lang ->
-            renderTable lang title url (f table) (toPath $ toLang i18n lang url)
+            renderTable lang title url (f table) (toFilePath $ toLang i18n lang url)
 
 -- * Types
 
@@ -158,9 +160,9 @@ tableBody lang title url (Table _ stuff) =
         let ii = toLang i18n lang
             in [shamlet|
 \<!-- title: #{ii title} -->
-\<!-- fi (Suomenkielinen versio): #{toLang i18n Fi url}.html -->
-\<!-- se (Svensk version): #{toLang i18n Se url}.html -->
-\<!-- en (English version): #{toLang i18n En url}.html -->
+\<!-- fi (Suomenkielinen versio): #{toUrlPath $ toLang i18n Fi url} -->
+\<!-- se (Svensk version): #{toUrlPath $ toLang i18n Se url} -->
+\<!-- en (English version): #{toUrlPath $ toLang i18n En url} -->
 \ 
 <p>
   #{ii "Kieli"}:&nbsp;
