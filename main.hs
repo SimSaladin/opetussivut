@@ -45,6 +45,8 @@ import           Text.Regex
 import qualified Text.XML           as XML
 import           Text.XML.Cursor
 import           Debug.Trace
+import           Data.Time
+import           System.IO.Unsafe (unsafePerformIO)
 
 -- * Configuration
 
@@ -62,6 +64,7 @@ colLangFi     = "kieli-fi"
 colCourseName = "Kurssin nimi"
 colWebsite    = "Kotisivu"
 colPeriod     = "Periodi"
+colRepeats    = "väli (vuosia)"
 colLukukausi  = "Lukukausi" -- kevät, kesä, syksy
 
 classCur = "highlight-green"
@@ -103,6 +106,14 @@ i18n = Map.fromList
     -- Titles
     , ("Kaikki kurssit", Map.fromList [ (En, "All courses"), (Se, "Alla kurser") ])
 
+    , ("Päivitetty", Map.fromList [ (En, "Last updated"), (Fi, "Viimeksi päivitetty") ])
+    , ("aputeksti", Map.fromList
+        [ (Fi, "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna")
+        , (En, "Clicking the course code goes to WebOodi. Grayed courses are arranged next year.")
+        ])
+
+    , ("op", Map.fromList [ (En, "ECTS"), (Se, "ECTS") ])
+
     -- urls
     , ("/opetus/kurssit", Map.fromList [ (En, "/english/studying/courses"), (Se, "/svenska/studierna/kurser") ])
     ]
@@ -136,7 +147,7 @@ main = do
 -- * Types
 
 -- | Source table
-data Table = Table [Header] [Course] deriving (Show, Read)
+data Table = Table UTCTime [Header] [Course] deriving (Show, Read)
 
 -- | td in source table
 type ContentBlock = Text
@@ -158,7 +169,7 @@ renderTable lang title url table fp =
 
 -- | How to render the data
 tableBody :: Lang -> Text -> Text -> Table -> Html
-tableBody lang title url (Table _ stuff) =
+tableBody lang title url (Table time _ stuff) =
         let ii = toLang i18n lang
             in [shamlet|
 \<!-- title: #{ii title} -->
@@ -189,8 +200,15 @@ tableBody lang title url (Table _ stuff) =
      <option value="syksy" >#{ii "Syksy"}
      <option value="kesä"  >#{ii "Kesä"}
 <p>
-  #{ii "Klikkaa kurssikoodista Weboodiin"}.
+  #{ii "aputeksti"}
 
+<table style="width:100%">
+    <tr>
+        <td style="width:10%">#{ii "Koodi"}
+        <td style="width:55%">#{ii "Kurssin nimi"}
+        <td style="width:7%" >#{ii "Periodi"}
+        <td style="width:7%" >#{ii "Toistuu"}
+        <td style="width:20%">#{ii "Opetuskieli"}
 $forall main <- L.groupBy mainCategory stuff
   <div.courses>
     <h1>#{ii $ mainCat $ head main}
@@ -204,20 +222,27 @@ $forall main <- L.groupBy mainCategory stuff
                 <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
                   <b>#{getThing colCode c}
 
-              <td style="width:62%">
-                #{getThingLang lang colCourseName c}
+              <td style="width:55%">#{getThingLang lang colCourseName c} #
+                $with op <- getThing "op" c
+                    $if not (T.null op)
+                         (#{op} #{ii "op"})
 
-              <td style="width:7%">
-                #{getThing colPeriod c}
-
-              <td style="width:20%">
-                #{getThing colLangFi c}
+              <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
+              <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
+              <td.compact style="width:20%" title="#{getThing colLangFi c}">#{getThing colLangFi c}
                 $maybe p <- getThingMaybe colWebsite c
                   <a href="#{p}">#{ii "Kotisivu"}
+
+<p>
+    #{ii "Päivitetty"} #{show time}
 <style>
-    tr[data-pidetaan="next-year"] {
-        color:gray;
+    .courses table { table-layout:fixed; }
+    .courses td.compact {
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
     }
+    tr[data-pidetaan="next-year"] { color:gray; }
 
 <script type="text/javascript">
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
@@ -395,7 +420,7 @@ processTable c = table
             let headers   = mapMaybe getHeader header
                 (ac, mcs) = L.mapAccumL (getRow headers) [] xs
                 courses   = catMaybes mcs
-            in Just $ Table headers courses
+            in Just $ Table (unsafePerformIO getCurrentTime) headers courses
         _ -> Nothing
 
 -- | A row is either a category or course
