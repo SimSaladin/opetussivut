@@ -23,6 +23,7 @@ module Main where
 
 import Prelude
 import           Control.Monad
+import           Control.Applicative
 import           Data.Function              (on)
 import qualified Data.List          as L
 import           Data.Map                   (Map)
@@ -62,6 +63,8 @@ colCourseName = "Kurssin nimi"
 colWebsite    = "Kotisivu"
 colPeriod     = "Periodi"
 colLukukausi  = "Lukukausi" -- kevät, kesä, syksy
+
+classCur = "highlight-green"
 
 -- List of categories
 categories :: [[Text]]
@@ -124,9 +127,8 @@ toFilePath = T.unpack . toPath . (<> ".body")
 
 main :: IO ()
 main = do
-    txt <- readFile "raw.html"
-    let doc   = XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
-        table = parseTable doc
+    doc <- getDataFile "raw.html"
+    let table = parseTable doc
     forM_ pages $ \(title, url, f) ->
         forM_ languages $ \lang ->
             renderTable lang title url (f table) (toFilePath $ toLang i18n lang url)
@@ -197,7 +199,7 @@ $forall main <- L.groupBy mainCategory stuff
         <h2>#{ii $ subCat $ head subs}
         <table style="width:100%">
           $forall c <- subs
-            <tr data-taso="#{mainCat c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}">
+            <tr data-taso="#{mainCat c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
               <td style="width:10%">
                 <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
                   <b>#{getThing colCode c}
@@ -212,6 +214,10 @@ $forall main <- L.groupBy mainCategory stuff
                 #{getThing colLangFi c}
                 $maybe p <- getThingMaybe colWebsite c
                   <a href="#{p}">#{ii "Kotisivu"}
+<style>
+    tr[data-pidetaan="next-year"] {
+        color:gray;
+    }
 
 <script type="text/javascript">
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
@@ -288,8 +294,12 @@ updateHiddenDivs = function() {
 
 -- * Courses and categories
 
-toCourse :: [Category] -> [Header] -> [Text] -> Course
-toCourse cats hs xs = (cats, Map.adjust toLang colLang $ Map.insert colLangFi fiLangs $ Map.insert colLukukausi lukukausi vals)
+toCourse :: [Category] -> [Header] -> Bool -> [Text] -> Course
+toCourse cats hs iscur xs =
+    (cats, Map.adjust toLang colLang    $
+           Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
+           Map.insert colLangFi fiLangs $
+           Map.insert colLukukausi lukukausi vals)
   where vals      = Map.fromList $ zip hs $ map normalize xs
 
         lukukausi = fromMaybe "syksy, kevät" $ Map.lookup colPeriod vals >>= toLukukausi
@@ -356,6 +366,11 @@ getData :: String -> IO XML.Document
 getData = liftM (XML.parseLBS_ parseSettings) . simpleHttp
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
+getDataFile :: FilePath -> IO XML.Document
+getDataFile fp = do
+    txt <- readFile fp
+    return $ XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
+
 -- ** Parse fetched
 
 parseTable :: XML.Document -> Table
@@ -385,13 +400,14 @@ processTable c = table
 
 -- | A row is either a category or course
 getRow :: [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
-getRow hs cats = go . map ($// content) -- ($// content)
-    where go :: [[Text]] -> ([Category], Maybe Course)
-          go (mc : vs) = case toCategory (head mc) of
+getRow hs cats cs = go (map ($// content) cs)
+                       ((cs !! 1 $| attribute "class") !! 0)
+    where go :: [[Text]] -> Text -> ([Category], Maybe Course)
+          go (mc : vs) classes = case toCategory (head mc) of
                 Just cat -> (accumCategory cat cats, Nothing)
                 Nothing | null vs                      -> (cats, Nothing)
-                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
-                        | otherwise                    -> (cats, Just $ toCourse cats hs $ map T.unwords vs)
+                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
+                        | otherwise                    -> (cats, Just $ toCourse cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
 
 -- * Debugging
 
