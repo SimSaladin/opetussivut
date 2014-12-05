@@ -68,15 +68,16 @@ data Config = Config
 
 instance Yaml.FromJSON Config
 
+pages      = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
+toPath     = ("testi" <>)
+toUrlPath  = ("/opetus/" <>) . toPath . (<> ".html")
+toFilePath = T.unpack . toPath . (<> ".body")
+
 -- | A hack, for confluence html is far from the (strictly) spec.
 regexes :: [String -> String]
 regexes = [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
-pages      = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
-toPath     = ("testi" <>)
-toUrlPath  = ("/opetus/" <>) . toPath . (<> ".html")
-toFilePath = T.unpack . toPath . (<> ".body")
 
 -- * Main
 

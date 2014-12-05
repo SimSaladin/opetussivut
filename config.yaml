@@ -4,10 +4,6 @@ pageId: "133436923"
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
 pageUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
 
-pathPrefix: "testi"
-urlPathPrefix: "/opetus/testi"
-pathPostfix: ".body"
-
 # Column names in source table
 colCode:       "Koodi" 
 colLang:       "opetuskieli" 
