@@ -1,0 +1,134 @@
+# confluence page id
+pageId: "133436923"
+
+# probably needs not change; "pageUrl ++ pageId" is where to get the table
+pageUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
+
+pathPrefix: "testi"
+urlPathPrefix: "/opetus/testi"
+pathPostfix: ".body"
+
+# Column names in source table
+colCode:       "Koodi" 
+colLang:       "opetuskieli" 
+colCourseName: "Kurssin nimi" 
+colRepeats:    "väli (vuosia)" 
+colPeriod:     "Periodi" 
+colWebsite:    "Kotisivu"  # TODO add to table
+
+# TODO Not in table?
+colLangFi:     "kieli-fi" 
+
+# kevät, kesä, syksy; not in table but generated
+colLukukausi:  "Lukukausi"
+
+# HTML class of second column td when arranged this year
+classCur: "highlight-green"
+
+# list of categories
+categories:
+   -
+     - "Perusopinnot"
+     - "Aineopinnot"
+     - "Syventävät opinnot"
+     - "Muut opinnot"
+   -
+     - "Pääaineopetus"
+   - 
+     - "Pakolliset opinnot"
+     - "Valinnaiset opinnot"
+   - 
+     - "1. "
+     - "2. "
+     - "3. "
+     - "4. "
+     - "5. "
+     - "6. "
+     - "7. "
+     - "8. "
+     - "9. "
+   -
+     - "A. "
+     - "B. "
+   -
+     - "kevät"
+     - "syksy"
+
+languages:
+   - en
+   - fi
+   - se
+
+ # Internationalisation in output. Map text fragments+language pairs to
+ # i18n texts
+i18n:
+   "Perusopinnot":
+      en: "Basic studies"
+      se: "Grundstudier"
+   "Aineopinnot":
+      en: "Intermediate studies"
+      se: "Ämnesstudier"
+   "Syventävät opinnot":
+      en: "Advanced studies"
+      se: "Advancerade studier"
+   "Muut opinnot":
+      en: "Other studies"
+      se: "Andra studier"
+
+   "Kaikki":
+      en: "All"
+      se: "Allt"
+   "Kieli":
+      en: "Language"
+      se: "Språk"
+   "Kevät":
+      en: "Spring"
+      se: "Vår"
+   "Syksy":
+      en: "Autumn"
+      se: "Höst"
+   "Kesä":
+      en: "Summer"
+      se: "Sommar"
+
+   "Koodi":
+      en: "Code"
+      se: "Kod"
+   "Kurssin nimi":
+      en: "Course name"
+      se: "Kursnamn"
+   "Periodi":
+      en: "Semester"
+      se: "Termin"
+   "Lukukausi":
+      en: "Semester"
+      se: "Termin"
+   "Taso":
+      en: "Level"
+      se: "Level"
+   "op":
+      en: "ECTS"
+      se: "ECTS"
+
+   "Englanniksi":
+      en: "In English"
+      se: "På engelska"
+   "Suomeksi":
+      en: "In Finnish"
+      se: "På finska"
+   "Ruotsiksi":
+      en: "In Swedish"
+      se: "På svenska"
+
+   "Kaikki kurssit":
+      en: "All courses"
+      se: "Alla kurser"
+   "Päivitetty":
+      fi: "Viimeksi päivitetty"
+      en: "Last updated"
+   "aputeksti":
+      fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna"
+      en: "Clicking the course code goes to WebOodi. Grayed courses are arranged next year."
+   "/opetus/kurssit":
+      en: "/english/studying/courses"
+      se: "/svenska/studierna/kurser"

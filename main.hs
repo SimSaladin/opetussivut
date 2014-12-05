@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 ------------------------------------------------------------------------------
 -- | 
@@ -24,6 +26,7 @@ module Main where
 import Prelude
 import           Control.Monad
 import           Control.Applicative
+import           Control.Monad.Reader
 import           Data.Function              (on)
 import qualified Data.List          as L
 import           Data.Map                   (Map)
@@ -35,6 +38,7 @@ import qualified Data.Text          as T
 import qualified Data.Text.IO       as T
 import qualified Data.Text.Lazy     as LT
 import qualified Data.Text.Lazy.IO  as LT
+import qualified Data.Yaml          as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
 import           Text.Printf
 import           Text.Blaze.Html            (preEscapedToHtml)
@@ -47,107 +51,53 @@ import           Text.XML.Cursor
 import           Debug.Trace
 import           Data.Time
 import           System.IO.Unsafe (unsafePerformIO)
+import           GHC.Generics
 
 -- * Configuration
 
--- | Page to fetch
-pageId = "133436923"
+type Lang = Text -- En, Se, Fi, ...
 
--- | Where to get the source table
-url :: String
-url = "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId=" ++ pageId
+data Config = Config
+            { pageId, pageUrl :: String
+            , colCode, colLang, colCourseName, colRepeats, colPeriod, colWebsite :: Text
+            , colLangFi, colLukukausi, classCur :: Text
+            , categories :: [[Text]]
+            , i18n :: I18N
+            , languages :: [Lang]
+            } deriving Generic
 
--- | Columns in source table
-colLang       = "opetuskieli"
-colCode       = "Koodi"
-colLangFi     = "kieli-fi"
-colCourseName = "Kurssin nimi"
-colWebsite    = "Kotisivu"
-colPeriod     = "Periodi"
-colRepeats    = "väli (vuosia)"
-colLukukausi  = "Lukukausi" -- kevät, kesä, syksy
-
-classCur = "highlight-green"
-
--- List of categories
-categories :: [[Text]]
-categories =
-    [ [ "Perusopinnot", "Aineopinnot", "Syventävät opinnot", "Muut opinnot" ]
-    , [ "Pääaineopetus" ]
-    , [ "Pakolliset opinnot", "Valinnaiset opinnot" ]
-    , [ "1. ", "2. ", "3. ", "4.", "5. ", "6. ", "7. ", "8. ", "9. " ]
-    , [ "A. ", "B. " ]
-    , [ "kevät", "syksy" ]
-    ]
-
-data Lang = Fi | En | Se
-          deriving (Show, Read, Eq, Ord)
-
-i18n :: Map Text (Map Lang Text)
-i18n = Map.fromList
-    [ ("Perusopinnot",       Map.fromList [ (En, "Basic studies"), (Se, "Grundstudier") ])
-    , ("Aineopinnot",        Map.fromList [ (En, "Intermediate studies"), (Se, "Ämnesstudier") ])
-    , ("Syventävät opinnot", Map.fromList [ (En, "Advanced studies"), (Se, "Advancerade studier") ])
-    , ("Muut opinnot",       Map.fromList [ (En, "Other studies"), (Se, "Andra studier") ])
-
-    , ("Kaikki",       Map.fromList [ (En, "All"), (Se, "Allt") ])
-    , ("Kieli",        Map.fromList [ (En, "Language"), (Se, "Språk") ])
-    , ("Kevät",        Map.fromList [ (En, "Spring"), (Se, "Vår") ])
-    , ("Syksy",        Map.fromList [ (En, "Autumn"), (Se, "Höst") ])
-    , ("Kesä",         Map.fromList [ (En, "Summer"), (Se, "Sommar") ])
-    , ("Kurssin nimi", Map.fromList [ (En, "Course name"), (Se, "Kursnamn") ])
-    , ("Lukukausi",    Map.fromList [ (En, "Semester"), (Se, "Termin") ])
-    , ("Taso",         Map.fromList [ (En, "Level"), (Se, "Level") ])
-
-    , ("Englanniksi", Map.fromList [ (En, "In English"), (Se, "På engelska") ])
-    , ("Suomeksi",    Map.fromList [ (En, "In Finnish"), (Se, "På finska") ])
-    , ("Ruotsiksi",   Map.fromList [ (En, "In Swedish"), (Se, "På svenska") ])
-
-    -- Titles
-    , ("Kaikki kurssit", Map.fromList [ (En, "All courses"), (Se, "Alla kurser") ])
-
-    , ("Päivitetty", Map.fromList [ (En, "Last updated"), (Fi, "Viimeksi päivitetty") ])
-    , ("aputeksti", Map.fromList
-        [ (Fi, "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna")
-        , (En, "Clicking the course code goes to WebOodi. Grayed courses are arranged next year.")
-        ])
-
-    , ("op", Map.fromList [ (En, "ECTS"), (Se, "ECTS") ])
-
-    -- urls
-    , ("/opetus/kurssit", Map.fromList [ (En, "/english/studying/courses"), (Se, "/svenska/studierna/kurser") ])
-    ]
+instance Yaml.FromJSON Config
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 regexes :: [String -> String]
-regexes =
-    [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
-    -- , rm "<meta [^>]*>", rm "<meta [^>]*\">"
-    -- , rm "<br[^>]*>", rm "<input [^>]*>"
-    -- , rm "</?ol[^>]*>", rm "</?li[^>]*>", rm "</?ul[^>]*>"
-    -- , rm "<div id=\"footer\".*section>[^<]*</div>"
-    ] where rm s i = subRegex (mkRegexWithOpts s False True) i ""
+regexes = [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>" ]
+    where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
 pages      = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
-languages  = [Fi, En, Se]
 toPath     = ("testi" <>)
 toUrlPath  = ("/opetus/" <>) . toPath . (<> ".html")
 toFilePath = T.unpack . toPath . (<> ".body")
 
 -- * Main
 
+type M = ReaderT Config IO
+
 main :: IO ()
-main = do
-    doc <- getDataFile "raw.html"
-    let table = parseTable doc
-    forM_ pages $ \(title, url, f) ->
-        forM_ languages $ \lang ->
-            renderTable lang title url (f table) (toFilePath $ toLang i18n lang url)
+main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
+
+go :: M ()
+go = do
+    table <- getData >>= parseTable
+    Config{..} <- ask
+    forM_ pages $ \(title, url, f) -> forM_ languages $ \lang ->
+        renderTable lang title url (f table) (toFilePath $ toLang i18n lang url)
 
 -- * Types
 
 -- | Source table
 data Table = Table UTCTime [Header] [Course] deriving (Show, Read)
+
+type I18N = Map Text (Map Lang Text)
 
 -- | td in source table
 type ContentBlock = Text
@@ -163,19 +113,19 @@ type Course = ([Category], Map Header ContentBlock)
 
 -- * HTML
 
-renderTable :: Lang -> Text -> Text -> Table -> FilePath -> IO ()
-renderTable lang title url table fp =
-    LT.writeFile fp $ renderMarkup $ tableBody lang title url table
+renderTable :: Lang -> Text -> Text -> Table -> FilePath -> M ()
+renderTable lang title url table fp = ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang title url table
 
 -- | How to render the data
-tableBody :: Lang -> Text -> Text -> Table -> Html
-tableBody lang title url (Table time _ stuff) =
-        let ii = toLang i18n lang
+tableBody :: Lang -> Text -> Text -> Table -> Config -> Html
+tableBody lang title url (Table time _ stuff) cnf@Config{..} =
+        let ii      = toLang i18n lang
+            getLang = getThingLang i18n
             in [shamlet|
 \<!-- title: #{ii title} -->
-\<!-- fi (Suomenkielinen versio): #{toUrlPath $ toLang i18n Fi url} -->
-\<!-- se (Svensk version): #{toUrlPath $ toLang i18n Se url} -->
-\<!-- en (English version): #{toUrlPath $ toLang i18n En url} -->
+\<!-- fi (Suomenkielinen versio): #{toUrlPath $ toLang i18n "fi" url} -->
+\<!-- se (Svensk version): #{toUrlPath $ toLang i18n "se" url} -->
+\<!-- en (English version): #{toUrlPath $ toLang i18n "en" url} -->
 \ 
 <p>
   #{ii "Kieli"}:&nbsp;
@@ -209,20 +159,20 @@ tableBody lang title url (Table time _ stuff) =
         <td style="width:7%" >#{ii "Periodi"}
         <td style="width:7%" >#{ii "Toistuu"}
         <td style="width:20%">#{ii "Opetuskieli"}
-$forall main <- L.groupBy mainCategory stuff
+$forall main <- L.groupBy (mainCategory cnf) stuff
   <div.courses>
-    <h1>#{ii $ mainCat $ head main}
-    $forall subs <- L.groupBy subCategory main
+    <h1>#{ii $ mainCat cnf $ head main}
+    $forall subs <- L.groupBy (subCategory cnf) main
       <div.courses>
-        <h2>#{ii $ subCat $ head subs}
+        <h2>#{ii $ subCat cnf $ head subs}
         <table style="width:100%">
           $forall c <- subs
-            <tr data-taso="#{mainCat c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
+            <tr data-taso="#{mainCat cnf c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
               <td style="width:10%">
                 <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
                   <b>#{getThing colCode c}
 
-              <td style="width:55%">#{getThingLang lang colCourseName c} #
+              <td style="width:55%">#{getLang lang colCourseName c} #
                 $with op <- getThing "op" c
                     $if not (T.null op)
                          (#{op} #{ii "op"})
@@ -248,17 +198,17 @@ $forall main <- L.groupBy mainCategory stuff
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
 
-toLang :: Map Text (Map Lang Text) -> Lang -> Text -> Text
+toLang :: I18N -> Lang -> Text -> Text
 toLang db lang key = case Map.lookup key db of
     Just db' -> case Map.lookup lang db' of
         Just val -> val
         Nothing
-            | lang == Fi -> key
-            | otherwise  -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ show lang ++ "'") key
+            | lang == "fi" -> key
+            | otherwise    -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ show lang ++ "'") key
     Nothing -> trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key
 
-getThingLang :: Lang -> Text -> Course -> Text
-getThingLang lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang i18n lang key) c
+getThingLang :: I18N -> Lang -> Text -> Course -> Text
+getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
 -- * JS
 
@@ -319,9 +269,9 @@ updateHiddenDivs = function() {
 
 -- * Courses and categories
 
-toCourse :: [Category] -> [Header] -> Bool -> [Text] -> Course
-toCourse cats hs iscur xs =
-    (cats, Map.adjust toLang colLang    $
+toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
+toCourse Config{..} cats hs iscur xs =
+    (cats, Map.adjust toLang colLang $
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
            Map.insert colLangFi fiLangs $
            Map.insert colLukukausi lukukausi vals)
@@ -354,26 +304,27 @@ normalize =
 
 -- | Accumulate a category to list of categories based on what categories
 -- cannot overlap
-accumCategory :: Category -> [Category] -> [Category]
-accumCategory c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
+accumCategory :: Config -> Category -> [Category] -> [Category]
+accumCategory Config{..} c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
     where ci = L.find (isJust . L.find (`T.isPrefixOf` c)) categories
 
-toCategory :: Text -> Maybe Category
-toCategory t = do guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
-                  guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
-                  return $ normalize t
+toCategory :: Config -> Text -> Maybe Category
+toCategory Config{..} t = do
+    guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
+    guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
+    return $ normalize t
 
 getThing :: Text -> Course -> Text
 getThing k c = fromMaybe (traceShow ("Key not found", k, c) $ "Key not found: " <> k) $ getThingMaybe k c
 
 -- | Level one category
-mainCat :: Course -> Text
-mainCat (cats, _)
+mainCat :: Config -> Course -> Text
+mainCat Config{..} (cats, _)
     | Just c <- L.find (`elem` (categories !! 0)) cats = c
     | otherwise = "(Tuntematon)"
 
-subCat :: Course -> Text
-subCat (cats, _)
+subCat :: Config -> Course -> Text
+subCat Config{..} (cats, _)
     | Just c <- L.find (maybe False (`elem` ['0'..'9']) . fmap fst . T.uncons) cats = c
     | otherwise = "Fysiikka"
     -- ^ TODO this thing makes no sense whatsoever
@@ -381,36 +332,36 @@ subCat (cats, _)
 getThingMaybe :: Text -> Course -> Maybe Text
 getThingMaybe k (_, c) = Map.lookup k c
 
-mainCategory, subCategory :: Course -> Course -> Bool
-mainCategory = (==) `on` mainCat
-subCategory = (==) `on` subCat
+mainCategory, subCategory :: Config -> Course -> Course -> Bool
+mainCategory cnf = (==) `on` mainCat cnf
+subCategory cnf = (==) `on` subCat cnf
 
 -- * Get source
 
-getData :: String -> IO XML.Document
-getData = liftM (XML.parseLBS_ parseSettings) . simpleHttp
-parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-
-getDataFile :: FilePath -> IO XML.Document
-getDataFile fp = do
-    txt <- readFile fp
-    return $ XML.parseText_ parseSettings $ LT.pack $ foldl1 (.) regexes txt
+getData :: M XML.Document
+getData = do
+    Config{..} <- ask
+    let parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
+    -- XML.parseLBS_ parseSettings <$> simpleHttp (pageUrl ++ pageId)
+    -- url
+    lift $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile "raw.html"
+    -- file
 
 -- ** Parse fetched
 
-parseTable :: XML.Document -> Table
-parseTable = head . catMaybes . findTable . fromDocument
+parseTable :: XML.Document -> M Table
+parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
 
-findTable :: Cursor -> [Maybe Table]
-findTable c = map ($| processTable) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
+findTable :: Cursor -> Config -> [Maybe Table]
+findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
 
 getHeader :: Cursor -> Maybe Header
 getHeader = go . normalize . T.unwords . ($// content)
     where go "" = Nothing
           go x = Just x
 
-processTable :: Cursor -> Maybe Table
-processTable c = table
+processTable :: Config -> Cursor -> Maybe Table
+processTable cnf c = table
   where
     cells :: [[Cursor]]
     cells = map ($/ element "td") (c $// element "tr")
@@ -418,21 +369,20 @@ processTable c = table
     table = case cells of
         (_ : header : xs) ->
             let headers   = mapMaybe getHeader header
-                (ac, mcs) = L.mapAccumL (getRow headers) [] xs
+                (ac, mcs) = L.mapAccumL (getRow cnf headers) [] xs
                 courses   = catMaybes mcs
             in Just $ Table (unsafePerformIO getCurrentTime) headers courses
         _ -> Nothing
 
 -- | A row is either a category or course
-getRow :: [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
-getRow hs cats cs = go (map ($// content) cs)
-                       ((cs !! 1 $| attribute "class") !! 0)
+getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
+getRow cnf@Config{..} hs cats cs = map ($// content) cs `go` ((cs !! 1 $| attribute "class") !! 0)
     where go :: [[Text]] -> Text -> ([Category], Maybe Course)
-          go (mc : vs) classes = case toCategory (head mc) of
-                Just cat -> (accumCategory cat cats, Nothing)
+          go (mc : vs) classes = case toCategory cnf (head mc) of
+                Just cat -> (accumCategory cnf cat cats, Nothing)
                 Nothing | null vs                      -> (cats, Nothing)
-                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
-                        | otherwise                    -> (cats, Just $ toCourse cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
+                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
+                        | otherwise                    -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
 
 -- * Debugging
 
