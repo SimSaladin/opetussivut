@@ -57,8 +57,15 @@ import           GHC.Generics
 
 type Lang = Text -- En, Se, Fi, ...
 
+data PageConf = PageConf
+              { pageId    :: String
+              , pageUrl   :: Map Lang Text
+              , pageTitle :: Map Lang Text
+              } deriving Generic
+
 data Config = Config
-            { pageId, pageUrl :: String
+            { fetchUrl :: String
+            , pages :: [PageConf]
             , colCode, colLang, colCourseName, colRepeats, colPeriod, colWebsite :: Text
             , colLangFi, colLukukausi, classCur :: Text
             , categories :: [[Text]]
@@ -66,12 +73,11 @@ data Config = Config
             , languages :: [Lang]
             } deriving Generic
 
+instance Yaml.FromJSON PageConf
 instance Yaml.FromJSON Config
 
-pages      = [ ("Kaikki kurssit", "/opetus/kurssit", id) ]
-toPath     = ("testi" <>)
-toUrlPath  = ("/opetus/" <>) . toPath . (<> ".html")
-toFilePath = T.unpack . toPath . (<> ".body")
+toUrlPath  = (<> ".html")
+toFilePath = T.unpack . ("testi" <>) . (<> ".body")
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 regexes :: [String -> String]
@@ -88,10 +94,15 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
 
 go :: M ()
 go = do
-    table <- getData >>= parseTable
     Config{..} <- ask
-    forM_ pages $ \(title, url, f) -> forM_ languages $ \lang ->
-        renderTable lang title url (f table) (toFilePath $ toLang i18n lang url)
+    forM_ pages $ \PageConf{..} -> do
+        table <- getData pageId >>= parseTable
+        forM_ languages $ \lang -> do
+            let url = lookup' lang pageUrl
+            renderTable lang (lookup' lang pageTitle) url table (toFilePath url)
+
+lookup' :: Lang -> Map Lang y -> y
+lookup' i = fromJust . Map.lookup i
 
 -- * Types
 
@@ -122,7 +133,51 @@ tableBody :: Lang -> Text -> Text -> Table -> Config -> Html
 tableBody lang title url (Table time _ stuff) cnf@Config{..} =
         let ii      = toLang i18n lang
             getLang = getThingLang i18n
-            in [shamlet|
+
+            withCat n xs f = [shamlet|
+$forall ys <- L.groupBy (catGroup cnf n) xs
+    #{ppCat cnf n ii ys}
+    <div.courses>#{f ys}
+|]
+            -- course table
+            go 4 xs = [shamlet|
+<table style="width:100%">
+ $forall c <- xs
+  <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
+    <td style="width:10%">
+      <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
+        <b>#{getThing colCode c}
+
+    <td style="width:55%">#{getLang lang colCourseName c} #
+      $with op <- getThing "op" c
+          $if not (T.null op)
+               (#{op} #{ii "op"})
+
+    <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
+    <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
+    <td.compact style="width:20%" title="#{getThing colLangFi c}">#{getThing colLangFi c}
+      $maybe p <- getThingMaybe colWebsite c
+        <a href="#{p}">#{ii "Kotisivu"}
+|]
+            go n xs = withCat n xs (go (n + 1))
+----
+            ppCat cnf n ii xs = [shamlet|
+$maybe x <- catAt cnf n (head xs)
+    $case n
+        $of 0
+            <h1>#{x}
+        $of 1
+            <h2>#{x}
+        $of 2
+            <h3>
+                <i>#{x}
+        $of 3
+            <h4>#{x}
+        $of 4
+            <h5>#{x}
+            |]
+----
+        in [shamlet|
 \<!-- title: #{ii title} -->
 \<!-- fi (Suomenkielinen versio): #{toUrlPath $ toLang i18n "fi" url} -->
 \<!-- se (Svensk version): #{toUrlPath $ toLang i18n "se" url} -->
@@ -160,32 +215,10 @@ tableBody lang title url (Table time _ stuff) cnf@Config{..} =
         <td style="width:7%" >#{ii "Periodi"}
         <td style="width:7%" >#{ii "Toistuu"}
         <td style="width:20%">#{ii "Opetuskieli"}
-$forall main <- L.groupBy (mainCategory cnf) stuff
-  <div.courses>
-    <h1>#{ii $ mainCat cnf $ head main}
-    $forall subs <- L.groupBy (subCategory cnf) main
-      <div.courses>
-        <h2>#{ii $ subCat cnf $ head subs}
-        <table style="width:100%">
-          $forall c <- subs
-            <tr data-taso="#{mainCat cnf c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
-              <td style="width:10%">
-                <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
-                  <b>#{getThing colCode c}
 
-              <td style="width:55%">#{getLang lang colCourseName c} #
-                $with op <- getThing "op" c
-                    $if not (T.null op)
-                         (#{op} #{ii "op"})
+#{withCat 0 stuff (go 1)}
 
-              <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
-              <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
-              <td.compact style="width:20%" title="#{getThing colLangFi c}">#{getThing colLangFi c}
-                $maybe p <- getThingMaybe colWebsite c
-                  <a href="#{p}">#{ii "Kotisivu"}
-
-<p>
-    #{ii "Päivitetty"} #{show time}
+<p>#{ii "Päivitetty"} #{show time}
 <style>
     .courses table { table-layout:fixed; }
     .courses td.compact {
@@ -194,7 +227,6 @@ $forall main <- L.groupBy (mainCategory cnf) stuff
         white-space:nowrap;
     }
     tr[data-pidetaan="next-year"] { color:gray; }
-
 <script type="text/javascript">
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
@@ -306,8 +338,10 @@ normalize =
 -- | Accumulate a category to list of categories based on what categories
 -- cannot overlap
 accumCategory :: Config -> Category -> [Category] -> [Category]
-accumCategory Config{..} c cs = L.nub $ c : maybe (c : cs) (L.deleteFirstsBy T.isInfixOf cs) ci
-    where ci = L.find (isJust . L.find (`T.isPrefixOf` c)) categories
+accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
+    Nothing -> error $ "Unknown category: " ++ show c
+    Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
+    where f i = concat $ L.drop i categories
 
 toCategory :: Config -> Text -> Maybe Category
 toCategory Config{..} t = do
@@ -315,38 +349,33 @@ toCategory Config{..} t = do
     guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
     return $ normalize t
 
+catAt :: Config -> Int -> Course -> Maybe Text
+catAt Config{..} n (cats, _) = case xs of x:_ -> Just x
+                                          _   -> Nothing
+    where xs = [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ]
+
 getThing :: Text -> Course -> Text
 getThing k c = fromMaybe (traceShow ("Key not found", k, c) $ "Key not found: " <> k) $ getThingMaybe k c
-
--- | Level one category
-mainCat :: Config -> Course -> Text
-mainCat Config{..} (cats, _)
-    | Just c <- L.find (`elem` (categories !! 0)) cats = c
-    | otherwise = "(Tuntematon)"
-
-subCat :: Config -> Course -> Text
-subCat Config{..} (cats, _)
-    | Just c <- L.find (maybe False (`elem` ['0'..'9']) . fmap fst . T.uncons) cats = c
-    | otherwise = "Fysiikka"
-    -- ^ TODO this thing makes no sense whatsoever
 
 getThingMaybe :: Text -> Course -> Maybe Text
 getThingMaybe k (_, c) = Map.lookup k c
 
-mainCategory, subCategory :: Config -> Course -> Course -> Bool
-mainCategory cnf = (==) `on` mainCat cnf
-subCategory cnf = (==) `on` subCat cnf
+catGroup :: Config -> Int -> Course -> Course -> Bool
+catGroup cnf n = (==) `on` catAt cnf n
 
 -- * Get source
 
-getData :: M XML.Document
-getData = do
+-- | Fetch a confluence doc by id.
+getData :: String -> M XML.Document
+getData pid = do
     Config{..} <- ask
+
     let parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-    -- XML.parseLBS_ parseSettings <$> simpleHttp (pageUrl ++ pageId)
-    -- url
-    lift $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile "raw.html"
-    -- file
+        file          = "/tmp/" <> pid <> ".html"
+
+    lift $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile file
+
+    -- lift $ XML.parseLBS_ parseSettings <$> simpleHttp (fetchUrl ++ pageId)
 
 -- ** Parse fetched
 
@@ -377,13 +406,13 @@ processTable cnf c = table
 
 -- | A row is either a category or course
 getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
-getRow cnf@Config{..} hs cats cs = map ($// content) cs `go` ((cs !! 1 $| attribute "class") !! 0)
-    where go :: [[Text]] -> Text -> ([Category], Maybe Course)
-          go (mc : vs) classes = case toCategory cnf (head mc) of
-                Just cat -> (accumCategory cnf cat cats, Nothing)
-                Nothing | null vs                      -> (cats, Nothing)
-                        | T.null (normalize (head mc)) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
-                        | otherwise                    -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) $ map T.unwords vs)
+getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` ((cs !! 1 $| attribute "class") !! 0)
+    where go :: [Text] -> Text -> ([Category], Maybe Course)
+          go (mc : vs) classes = case toCategory cnf mc of
+                Just cat                        -> (accumCategory cnf cat cats, Nothing)
+                Nothing | null vs               -> (cats, Nothing)
+                        | T.null (normalize mc) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
+                        | otherwise             -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
 
 -- * Debugging
 

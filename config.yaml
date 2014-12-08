@@ -1,8 +1,67 @@
-# confluence page id
-pageId: "133436923"
+pages:
+   -
+      pageId: "133436923"
+      pageTitle:
+         fi: "Fysiikka"
+         se: "Fysik - Undervisning på finska"
+         en: "Physics"
+      pageUrl:
+         fi: "/opetus/kurssit/fysiikka"
+         se: "/svenska/studierna/kurser/fysik_finska"
+         en: "/english/studying/courses/physics"
+   -
+      pageId: "133439230"
+      pageTitle:
+         fi: "Ruotsinkielinen fysiikan opetus"
+         se: "Fysik - Undervisning på svenska"
+         en: "Physics - Teaching in Swedish"
+      pageUrl:
+         fi: "/opetus/kurssit/ruotsinkielinen_fysiikka"
+         se: "/svenska/studierna/kurser/fysik_svenska"
+         en: "/english/studying/courses/physics_swedish"
+   -
+      pageId: "133439202"
+      pageTitle:
+         fi: "Fysiikan opettajankoulutus"
+         se: "Fysik lärare"
+         en: "Physics teacher"
+      pageUrl:
+         fi: "/opetus/kurssit/fysiikan_opettajankoulutus"
+         se: "/svenska/studierna/kurser/fysik_lärare_undervisning"
+         en: "/english/studying/courses/physics_teachers"
+   -
+      pageId: "133439172"
+      pageTitle:
+         fi: "Teoreettinen fysiikka"
+         se: "Teoretisk fysik"
+         en: "Theoretical physics"
+      pageUrl:
+         fi: "/opetus/kurssit/teoreettinen_fysiikka"
+         se: "/svenska/studierna/kurser/teoretisk_fysik"
+         en: "/english/studying/courses/theoretical_physics"
+   -
+      pageId: "133439148"
+      pageTitle:
+         fi: "Vesivaipan geofysiikka"
+         se: "Geophysics" # TODO
+         en: "Geofysik"
+      pageUrl:
+         fi: "/opetus/kurssit/vesivaipan_geofysiikka"
+         se: "/svenska/studierna/kurser/geofysik"
+         en: "/english/studying/courses/geophysics"
+   -
+      pageId: "133439114"
+      pageTitle:
+         fi: "Meteorologia"
+         se: "Meteorologi"
+         en: "Meteorology"
+      pageUrl:
+         fi: "/opetus/kurssit/meteorologia"
+         se: "/svenska/studierna/kurser/meteorologi"
+         en: "/english/studying/courses/meteorology"
 
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
-pageUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
+fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
 
 # Column names in source table
 colCode:       "Koodi" 
@@ -10,7 +69,7 @@ colLang:       "opetuskieli"
 colCourseName: "Kurssin nimi" 
 colRepeats:    "väli (vuosia)" 
 colPeriod:     "Periodi" 
-colWebsite:    "Kotisivu"  # TODO add to table
+colWebsite:    "Kotisivu"
 
 # TODO Not in table?
 colLangFi:     "kieli-fi" 
@@ -28,11 +87,6 @@ categories:
      - "Aineopinnot"
      - "Syventävät opinnot"
      - "Muut opinnot"
-   -
-     - "Pääaineopetus"
-   - 
-     - "Pakolliset opinnot"
-     - "Valinnaiset opinnot"
    - 
      - "1. "
      - "2. "
@@ -43,12 +97,12 @@ categories:
      - "7. "
      - "8. "
      - "9. "
+   - 
+     - "Pakolliset opinnot"
+     - "Valinnaiset opinnot"
    -
      - "A. "
      - "B. "
-   -
-     - "kevät"
-     - "syksy"
 
 languages:
    - en
@@ -123,8 +177,5 @@ i18n:
       fi: "Viimeksi päivitetty"
       en: "Last updated"
    "aputeksti":
-      fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna"
-      en: "Clicking the course code goes to WebOodi. Grayed courses are arranged next year."
-   "/opetus/kurssit":
-      en: "/english/studying/courses"
-      se: "/svenska/studierna/kurser"
+      fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna. Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne."
+      en: "Clicking the course code goes to WebOodi. Grayed courses are arranged next year. In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc."
