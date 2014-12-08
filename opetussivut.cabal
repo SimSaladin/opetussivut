@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 flag static
   description: Link statically
-  default: false
+  default: False
 
 executable opetussivut
   main-is:             main.hs
@@ -38,6 +38,7 @@ executable opetussivut
                      , mtl
   -- hs-source-dirs:      
   default-language:    Haskell2010
+  ghc-options:         -Wall
 
   if flag(static)
    ld-options: -static -pthread

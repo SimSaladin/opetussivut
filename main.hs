@@ -20,7 +20,7 @@
 --     /english/studying/{...}.body
 --
 ------------------------------------------------------------------------------
-module Main where
+module Main (main) where
 
 import Prelude
 import           Control.Monad
@@ -34,12 +34,10 @@ import           Data.Maybe
 import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
 import qualified Data.Text          as T
-import qualified Data.Text.IO       as T
 import qualified Data.Text.Lazy     as LT
 import qualified Data.Text.Lazy.IO  as LT
 import qualified Data.Yaml          as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
-import           Text.Printf
 import           Text.Blaze.Html            (preEscapedToHtml)
 import           Text.Blaze.Renderer.Text   (renderMarkup)
 import           Text.Hamlet
@@ -49,33 +47,54 @@ import qualified Text.XML           as XML
 import           Text.XML.Cursor
 import           Debug.Trace
 import           Data.Time
-import           System.IO.Unsafe (unsafePerformIO)
+import           System.Exit (exitFailure)
+import           System.IO.Unsafe (unsafePerformIO) -- pure getCurrentTime
+import           System.Environment (getArgs)
 import           GHC.Generics
 
--- * Configuration
+main :: IO ()
+main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
+  where go = do Config{..} <- ask
+                forM_ pages $ \pc@PageConf{..} -> do
+                    table <- getData pageId >>= parseTable
+                    forM_ languages $ \lang -> renderTable lang pc table
 
-type Lang = Text -- En, Se, Fi, ...
+-- * Types
 
+type M = ReaderT Config IO
+type Lang = Text -- ^ en, se, fi, ...
 data PageConf = PageConf
               { pageId    :: String
               , pageUrl   :: Map Lang Text
               , pageTitle :: Map Lang Text
               } deriving Generic
-
-data Config = Config
-            { fetchUrl :: String
-            , pages :: [PageConf]
-            , colCode, colLang, colCourseName, colRepeats, colPeriod, colWebsite :: Text
-            , colLangFi, colLukukausi, classCur :: Text
-            , categories :: [[Text]]
-            , i18n :: I18N
-            , languages :: [Lang]
-            } deriving Generic
-
+data Config   = Config
+              { fetchUrl                          :: String
+              , pages                             :: [PageConf]
+              , colCode, colLang, colCourseName
+              , colRepeats, colPeriod, colWebsite :: Text
+              , colLangFi, colLukukausi, classCur :: Text
+              , categories                        :: [[Text]]
+              , i18n                              :: I18N
+              , languages                         :: [Lang]
+              } deriving Generic
 instance Yaml.FromJSON PageConf
 instance Yaml.FromJSON Config
 
+data Table        = Table UTCTime [Header] [Course]       -- ^ Source table
+                  deriving (Show, Read)
+type Header       = Text                                  -- ^ Column headers in source table
+type Course       = ([Category], Map Header ContentBlock) -- ^ A row in source table
+type Category     = Text                                  -- ^ First column in source table
+type ContentBlock = Text                                  -- ^ td in source table
+type I18N         = Map Text (Map Lang Text)
+
+-- * Utility
+
+toUrlPath :: Text -> Text
 toUrlPath  = (<> ".html")
+
+toFilePath :: Text -> FilePath
 toFilePath = T.unpack . ("testi" <>) . (<> ".body")
 
 -- | A hack, for confluence html is far from the (strictly) spec.
@@ -84,61 +103,43 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
+toLang :: I18N -> Lang -> Text -> Text
+toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
+                           (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
+  where fallback | "fi" <- lang = key
+                 | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
 
--- * Main
+lookup' :: Lang -> Map Lang y -> y
+lookup' i = fromJust . Map.lookup i
 
-type M = ReaderT Config IO
+normalize :: Text -> Text
+normalize =
+    T.dropAround (`elem` " ,-!")
+    . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
+    . T.unwords . map (T.unwords . T.words) . T.lines
 
-main :: IO ()
-main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
-
-go :: M ()
-go = do
-    Config{..} <- ask
-    forM_ pages $ \pc@PageConf{..} -> do
-        table <- getData pageId >>= parseTable
-        forM_ languages $ \lang -> renderTable lang pc table
-
--- * Types
-
--- | Source table
-data Table = Table UTCTime [Header] [Course] deriving (Show, Read)
-
-type I18N = Map Text (Map Lang Text)
-
--- | td in source table
-type ContentBlock = Text
-
--- | Column headers in source table
-type Header = Text
-
--- | First column in source table
-type Category = Text
-
--- | Row is source table
-type Course = ([Category], Map Header ContentBlock)
-
--- * HTML
+-- * Rendering
 
 renderTable :: Lang -> PageConf -> Table -> M ()
 renderTable lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
   where fp = toFilePath $ lookup' lang pageUrl
 
+-- * Content
+
 -- | How to render the data
 tableBody :: Lang -> PageConf -> Table -> Config -> Html
 tableBody lang PageConf{..} (Table time _ stuff) cnf@Config{..} =
-        let ii      = toLang i18n lang
-            getLang = getThingLang i18n
-
+        let ii             = toLang i18n lang
+            getLang        = getThingLang i18n
             withCat n xs f = [shamlet|
 $forall ys <- L.groupBy (catGroup cnf n) xs
     <div.courses>
-        #{ppCat cnf n ii ys}
+        #{ppCat n ys}
         #{f ys}
 |]
             -- course table
-            go 4 xs = [shamlet|
+            go 4 xs        = [shamlet|
 <table style="width:100%">
  $forall c <- xs
   <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
@@ -159,9 +160,9 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
             \ #
             <a href="#{p}">#{ii colWebsite}
 |]
-            go n xs = withCat n xs (go (n + 1))
+            go n xs        = withCat n xs (go (n + 1))
 ----
-            ppCat cnf n ii xs = [shamlet|
+            ppCat n xs     = [shamlet|
 $maybe x <- catAt cnf n (head xs)
     $case n
         $of 0
@@ -175,6 +176,10 @@ $maybe x <- catAt cnf n (head xs)
             <h4>#{ii x}
         $of 4
             <h5>#{ii x}
+        $of 5
+            <h6>#{ii x}
+        $of _
+            <b>#{ii x}
             |]
 ----
         in [shamlet|
@@ -228,24 +233,8 @@ $maybe x <- catAt cnf n (head xs)
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
 
-toLang :: I18N -> Lang -> Text -> Text
-toLang db lang key = case Map.lookup key db of
-    Just db' -> case Map.lookup lang db' of
-        Just val -> val
-        Nothing
-            | lang == "fi" -> key
-            | otherwise    -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
-    Nothing -> trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key
-
-getThingLang :: I18N -> Lang -> Text -> Course -> Text
-getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
-
-lookup' :: Lang -> Map Lang y -> y
-lookup' i = fromJust . Map.lookup i
-
--- * JS
-
 --
+jsLogic :: JavascriptUrl url
 jsLogic = [julius|
 
 fs = { };
@@ -304,7 +293,7 @@ updateHiddenDivs = function() {
 
 toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
 toCourse Config{..} cats hs iscur xs =
-    (cats, Map.adjust toLang colLang $
+    (cats, Map.adjust getLang colLang $
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
            Map.insert colLangFi fiLangs $
            Map.insert colLukukausi lukukausi vals)
@@ -321,19 +310,14 @@ toCourse Config{..} cats hs iscur xs =
             | "kesä"  `T.isInfixOf` x                  = Just "kesä"
             | otherwise                                = Nothing
 
-        toLang x | x == "suomi" = "fi"
-                 | "suomi" `T.isInfixOf` x, "eng" `T.isInfixOf` x = "fi, en"
-                 | "eng" `T.isInfixOf` x = "en"
-                 | otherwise = "fi, en, se"
+        getLang x | x == "suomi"                                   = "fi"
+                  | "suomi" `T.isInfixOf` x, "eng" `T.isInfixOf` x = "fi, en"
+                  | "eng"   `T.isInfixOf` x                        = "en"
+                  | otherwise                                      = "fi, en, se"
 
         fiLangs = case Map.lookup colLang vals of
                       Just x  -> x -- T.replace "fi" "suomi" $ T.replace "en" "englanti" $ T.replace "se" "ruotsi" x
                       Nothing -> "?"
-
-normalize =
-    T.dropAround (`elem` " ,-!")
-    . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
-    . T.unwords . map (T.unwords . T.words) . T.lines
 
 -- | Accumulate a category to list of categories based on what categories
 -- cannot overlap
@@ -350,18 +334,21 @@ toCategory Config{..} t = do
     return $ normalize t
 
 catAt :: Config -> Int -> Course -> Maybe Text
-catAt Config{..} n (cats, _) = case xs of x:_ -> Just x
-                                          _   -> Nothing
-    where xs = [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ]
+catAt Config{..} n (cats, _) = case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
+                                   x:_ -> Just x
+                                   _   -> Nothing
+
+catGroup :: Config -> Int -> Course -> Course -> Bool
+catGroup cnf n = (==) `on` catAt cnf n
 
 getThing :: Text -> Course -> Text
-getThing k c = fromMaybe (traceShow ("Key not found", k, c) $ "Key not found: " <> k) $ getThingMaybe k c
+getThing k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "Key not found: " <> k) $ getThingMaybe k c
 
 getThingMaybe :: Text -> Course -> Maybe Text
 getThingMaybe k (_, c) = Map.lookup k c
 
-catGroup :: Config -> Int -> Course -> Course -> Bool
-catGroup cnf n = (==) `on` catAt cnf n
+getThingLang :: I18N -> Lang -> Text -> Course -> Text
+getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
 -- * Get source
 
@@ -369,13 +356,13 @@ catGroup cnf n = (==) `on` catAt cnf n
 getData :: String -> M XML.Document
 getData pid = do
     Config{..} <- ask
-
+    xs         <- lift getArgs
     let parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
         file          = "/tmp/" <> pid <> ".html"
-
-    lift $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile file
-
-    -- lift $ XML.parseLBS_ parseSettings <$> simpleHttp (fetchUrl ++ pageId)
+    lift $ case xs of
+        ["fetch"] -> XML.parseLBS_ parseSettings <$> simpleHttp (fetchUrl ++ pid)
+        ["file"]  -> XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile file
+        _         -> putStrLn "Usage: opetussivut < fetch | file >" >> exitFailure
 
 -- ** Parse fetched
 
@@ -386,38 +373,25 @@ findTable :: Cursor -> Config -> [Maybe Table]
 findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
 
 getHeader :: Cursor -> Maybe Header
-getHeader = go . normalize . T.unwords . ($// content)
-    where go "" = Nothing
-          go x  = Just $ T.toLower x
+getHeader c = return x <* guard (not $ T.null x)
+  where x = T.toLower . normalize $ T.unwords (c $// content)
 
 processTable :: Config -> Cursor -> Maybe Table
-processTable cnf c = table
+processTable cnf c = case cells of
+    _ : header : xs ->
+        let headers       = mapMaybe getHeader header
+            (_, mcourses) = L.mapAccumL (getRow cnf headers) [] xs
+        in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
+    _ -> Nothing
   where
-    cells :: [[Cursor]]
     cells = map ($/ element "td") (c $// element "tr")
-
-    table = case cells of
-        (_ : header : xs) ->
-            let headers   = mapMaybe getHeader header
-                (ac, mcs) = L.mapAccumL (getRow cnf headers) [] xs
-                courses   = catMaybes mcs
-            in Just $ Table (unsafePerformIO getCurrentTime) headers courses
-        _ -> Nothing
 
 -- | A row is either a category or course
 getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
 getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` ((cs !! 1 $| attribute "class") !! 0)
-    where go :: [Text] -> Text -> ([Category], Maybe Course)
+    where go []        _       = error "Encountered an empty row in the table!"
           go (mc : vs) classes = case toCategory cnf mc of
                 Just cat                        -> (accumCategory cnf cat cats, Nothing)
                 Nothing | null vs               -> (cats, Nothing)
                         | T.null (normalize mc) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
                         | otherwise             -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
-
--- * Debugging
-
-ppCourse :: Course -> IO ()
-ppCourse (cats, vals) = do
-    T.putStrLn " ---------------------------------------- "
-    printf "%-28s: %s\n" ("Categories" :: String) (T.unpack $ T.intercalate ", " cats)
-    mapM_ (\(h, v) -> printf "%-28s: %s\n" (T.unpack h) (T.unpack v)) $ Map.toList vals

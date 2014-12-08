@@ -135,6 +135,13 @@ i18n:
       en: "Other studies"
       se: "Andra studier"
 
+   "Pakolliset opinnot":
+      en: "Mandatory studies"
+      se: "Obligatoriska studier"
+   "Valinnaiset opinnot":
+      en: "Optional studies"
+      se: "Valfria studier"
+
    "Kaikki":
       en: "All"
       se: "Allt"
@@ -176,9 +183,10 @@ i18n:
       fi: "Opetuskieli"
       en: "Language"
       se: "Språk"
-
    "väli(vuosia)":
+      fi: "Toistuu"
       en: "Repeats"
+      se: "Upprepar"
 
    "en":
       fi: "Englanniksi"
@@ -194,15 +202,14 @@ i18n:
       se: "På svenska"
 
    "Päivitetty":
-      en: "Updated"
+      fi: "Sivu päivitetty viimeksi"
+      en: "Page was last updated"
       se: "Updaterad"
 
    "Kaikki kurssit":
       en: "All courses"
       se: "Alla kurser"
-   "Päivitetty":
-      fi: "Viimeksi päivitetty"
-      en: "Last updated"
+
    "aputeksti":
       fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna. Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne."
       en: "Clicking the course code goes to WebOodi. Grayed courses are arranged next year. In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc."
