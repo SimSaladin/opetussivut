@@ -364,7 +364,7 @@ getData pid = do
         ["file"]  -> XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile file
         _         -> putStrLn "Usage: opetussivut < fetch | file >" >> exitFailure
 
--- ** Parse fetched
+-- * Parse doc
 
 parseTable :: XML.Document -> M Table
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
