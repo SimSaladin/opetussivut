@@ -80,7 +80,8 @@ toFilePath = T.unpack . ("testi" <>) . (<> ".body")
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 regexes :: [String -> String]
-regexes = [ rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>" ]
+regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
+          , rm "<br[^>]*>", rm "<col [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
 
@@ -154,7 +155,9 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
     <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
     <td.compact style="width:20%" title="#{getThing colLangFi c}">#{getThing colLangFi c}
       $maybe p <- getThingMaybe colWebsite c
-        <a href="#{p}">#{ii "Kotisivu"}
+        $if not (T.null p)
+            \ #
+            <a href="#{p}">#{ii colWebsite}
 |]
             go n xs = withCat n xs (go (n + 1))
 ----
@@ -162,16 +165,16 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
 $maybe x <- catAt cnf n (head xs)
     $case n
         $of 0
-            <h1>#{x}
+            <h1>#{ii x}
         $of 1
-            <h2>#{x}
+            <h2>#{ii x}
         $of 2
             <h3>
-                <i>#{x}
+                <i>#{ii x}
         $of 3
-            <h4>#{x}
+            <h4>#{ii x}
         $of 4
-            <h5>#{x}
+            <h5>#{ii x}
             |]
 ----
         in [shamlet|
@@ -184,17 +187,14 @@ $maybe x <- catAt cnf n (head xs)
   #{ii "Kieli"}:&nbsp;
   <select id="select-kieli" name="kieli" onchange="updateList(this)">
      <option value="any">#{ii "Kaikki"}
-     <option value="fi" >#{ii "Suomeksi"}
-     <option value="en" >#{ii "Englanniksi"}
-     <option value="se" >#{ii "Ruotsiksi"}
+     $forall l <- languages
+        <option value="#{l}">#{ii l}
 
   #{ii "Taso"}:&nbsp;
   <select id="select-taso" name="taso" onchange="updateList(this)">
-     <option value="any"               >#{ii "Kaikki"}
-     <option value="Perusopinnot"      >#{ii "Perusopinnot"}
-     <option value="Aineopinnot"       >#{ii "Aineopinnot"}
-     <option value="Muut opinnot"      >#{ii "Muut opinnot"}
-     <option value="Syventävät opinnot">#{ii "Syventävät opinnot"}
+     <option value="any" >#{ii "Kaikki"}
+     $forall cat <- (categories !! 0)
+        <option value="#{cat}">#{ii cat}
 
   #{ii "Lukukausi"}:&nbsp;
   <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
@@ -207,11 +207,11 @@ $maybe x <- catAt cnf n (head xs)
 
 <table style="width:100%">
     <tr>
-        <td style="width:10%">#{ii "Koodi"}
-        <td style="width:55%">#{ii "Kurssin nimi"}
-        <td style="width:7%" >#{ii "Periodi"}
-        <td style="width:7%" >#{ii "Toistuu"}
-        <td style="width:20%">#{ii "Opetuskieli"}
+        <td style="width:10%">#{ii colCode}
+        <td style="width:55%">#{ii colCourseName}
+        <td style="width:7%" >#{ii colPeriod}
+        <td style="width:7%" >#{ii colRepeats}
+        <td style="width:20%">#{ii colLang}
 
 #{withCat 0 stuff (go 1)}
 
@@ -234,7 +234,7 @@ toLang db lang key = case Map.lookup key db of
         Just val -> val
         Nothing
             | lang == "fi" -> key
-            | otherwise    -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ show lang ++ "'") key
+            | otherwise    -> trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
     Nothing -> trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key
 
 getThingLang :: I18N -> Lang -> Text -> Course -> Text
@@ -388,7 +388,7 @@ findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "conflue
 getHeader :: Cursor -> Maybe Header
 getHeader = go . normalize . T.unwords . ($// content)
     where go "" = Nothing
-          go x = Just x
+          go x  = Just $ T.toLower x
 
 processTable :: Config -> Cursor -> Maybe Table
 processTable cnf c = table

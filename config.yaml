@@ -74,12 +74,12 @@ pages:
 fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
 
 # Column names in source table
-colCode:       "Koodi" 
+colCode:       "koodi" 
 colLang:       "opetuskieli" 
-colCourseName: "Kurssin nimi" 
-colRepeats:    "väli (vuosia)" 
-colPeriod:     "Periodi" 
-colWebsite:    "Kotisivu"
+colCourseName: "kurssin nimi" 
+colRepeats:    "väli(vuosia)" 
+colPeriod:     "periodi" 
+colWebsite:    "kotisivu"
 
 # TODO Not in table?
 colLangFi:     "kieli-fi" 
@@ -151,34 +151,51 @@ i18n:
       en: "Summer"
       se: "Sommar"
 
-   "Koodi":
+   "koodi":
       en: "Code"
       se: "Kod"
-   "Kurssin nimi":
+   "kurssin nimi":
       en: "Course name"
       se: "Kursnamn"
-   "Periodi":
+   "periodi":
       en: "Semester"
       se: "Termin"
    "Lukukausi":
       en: "Semester"
       se: "Termin"
-   "Taso":
-      en: "Level"
-      se: "Level"
    "op":
       en: "ECTS"
       se: "ECTS"
+   "kotisivu":
+      en: "Home page"
+      se: "Hemsida"
+   "Taso":
+      en: "Level"
+      se: "Level"
+   "opetuskieli":
+      fi: "Opetuskieli"
+      en: "Language"
+      se: "Språk"
 
-   "Englanniksi":
+   "väli(vuosia)":
+      en: "Repeats"
+
+   "en":
+      fi: "Englanniksi"
       en: "In English"
       se: "På engelska"
-   "Suomeksi":
+   "fi":
+      fi: "Suomeksi"
       en: "In Finnish"
       se: "På finska"
-   "Ruotsiksi":
+   "se":
+      fi: "Ruotsiksi"
       en: "In Swedish"
       se: "På svenska"
+
+   "Päivitetty":
+      en: "Updated"
+      se: "Updaterad"
 
    "Kaikki kurssit":
       en: "All courses"
