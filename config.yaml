@@ -50,7 +50,7 @@ pages:
          se: "/svenska/studierna/kurser/geofysik"
          en: "/english/studying/courses/geophysics"
    -
-      pageId: "133439114"
+      pageId: "133439021"
       pageTitle:
          fi: "Meteorologia"
          se: "Meteorologi"
@@ -59,6 +59,16 @@ pages:
          fi: "/opetus/kurssit/meteorologia"
          se: "/svenska/studierna/kurser/meteorologi"
          en: "/english/studying/courses/meteorology"
+   -
+      pageId: "133439114"
+      pageTitle:
+         fi: "Tähtitiede"
+         se: "Astronomi"
+         en: "Astronomy"
+      pageUrl:
+         fi: "/opetus/kurssit/tahtitiede"
+         se: "/svenska/studierna/kurser/astronomi"
+         en: "/english/studying/courses/astronomy"
 
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
 fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
