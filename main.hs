@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 ------------------------------------------------------------------------------
@@ -133,8 +132,9 @@ tableBody lang PageConf{..} (Table time _ stuff) cnf@Config{..} =
 
             withCat n xs f = [shamlet|
 $forall ys <- L.groupBy (catGroup cnf n) xs
-    #{ppCat cnf n ii ys}
-    <div.courses>#{f ys}
+    <div.courses>
+        #{ppCat cnf n ii ys}
+        #{f ys}
 |]
             -- course table
             go 4 xs = [shamlet|
