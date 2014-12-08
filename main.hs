@@ -95,14 +95,9 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
 go :: M ()
 go = do
     Config{..} <- ask
-    forM_ pages $ \PageConf{..} -> do
+    forM_ pages $ \pc@PageConf{..} -> do
         table <- getData pageId >>= parseTable
-        forM_ languages $ \lang -> do
-            let url = lookup' lang pageUrl
-            renderTable lang (lookup' lang pageTitle) url table (toFilePath url)
-
-lookup' :: Lang -> Map Lang y -> y
-lookup' i = fromJust . Map.lookup i
+        forM_ languages $ \lang -> renderTable lang pc table
 
 -- * Types
 
@@ -125,12 +120,14 @@ type Course = ([Category], Map Header ContentBlock)
 
 -- * HTML
 
-renderTable :: Lang -> Text -> Text -> Table -> FilePath -> M ()
-renderTable lang title url table fp = ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang title url table
+renderTable :: Lang -> PageConf -> Table -> M ()
+renderTable lang pc@PageConf{..} table =
+    ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
+  where fp = toFilePath $ lookup' lang pageUrl
 
 -- | How to render the data
-tableBody :: Lang -> Text -> Text -> Table -> Config -> Html
-tableBody lang title url (Table time _ stuff) cnf@Config{..} =
+tableBody :: Lang -> PageConf -> Table -> Config -> Html
+tableBody lang PageConf{..} (Table time _ stuff) cnf@Config{..} =
         let ii      = toLang i18n lang
             getLang = getThingLang i18n
 
@@ -178,10 +175,10 @@ $maybe x <- catAt cnf n (head xs)
             |]
 ----
         in [shamlet|
-\<!-- title: #{ii title} -->
-\<!-- fi (Suomenkielinen versio): #{toUrlPath $ toLang i18n "fi" url} -->
-\<!-- se (Svensk version): #{toUrlPath $ toLang i18n "se" url} -->
-\<!-- en (English version): #{toUrlPath $ toLang i18n "en" url} -->
+\<!-- title: #{lookup' lang pageTitle} -->
+\<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" pageUrl} -->
+\<!-- se (Svensk version): #{toUrlPath $ lookup' "se" pageUrl} -->
+\<!-- en (English version): #{toUrlPath $ lookup' "en" pageUrl} -->
 \ 
 <p>
   #{ii "Kieli"}:&nbsp;
@@ -242,6 +239,9 @@ toLang db lang key = case Map.lookup key db of
 
 getThingLang :: I18N -> Lang -> Text -> Course -> Text
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
+
+lookup' :: Lang -> Map Lang y -> y
+lookup' i = fromJust . Map.lookup i
 
 -- * JS
 
