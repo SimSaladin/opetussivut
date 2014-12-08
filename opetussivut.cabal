@@ -24,11 +24,12 @@ executable opetussivut
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.4 && <4.8
+                     , ghc-prim
                      , text
                      , containers
                      , http-conduit
                      , xml-conduit
-                     , shakespeare
+                     , shakespeare >= 2.0
                      , blaze-markup
                      , blaze-html
                      , regex-compat
