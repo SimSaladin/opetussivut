@@ -81,9 +81,6 @@ colRepeats:    "väli(vuosia)"
 colPeriod:     "periodi" 
 colWebsite:    "kotisivu"
 
-# TODO Not in table?
-colLangFi:     "kieli-fi" 
-
 # kevät, kesä, syksy; not in table but generated
 colLukukausi:  "Lukukausi"
 
@@ -174,7 +171,8 @@ i18n:
       en: "ECTS"
       se: "ECTS"
    "kotisivu":
-      en: "Home page"
+      fi: "Sivu"
+      en: "Website"
       se: "Hemsida"
    "Taso":
       en: "Level"
@@ -212,4 +210,4 @@ i18n:
 
    "aputeksti":
       fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna. Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne."
-      en: "Clicking the course code goes to WebOodi. Grayed courses are arranged next year. In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc."
+      en: "Clicking the course code goes to WebOodi. Courses grayed out are arranged next year. In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc."

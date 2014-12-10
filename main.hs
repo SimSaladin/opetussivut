@@ -73,7 +73,7 @@ data Config   = Config
               , pages                             :: [PageConf]
               , colCode, colLang, colCourseName
               , colRepeats, colPeriod, colWebsite :: Text
-              , colLangFi, colLukukausi, classCur :: Text
+              , colLukukausi, classCur            :: Text
               , categories                        :: [[Text]]
               , i18n                              :: I18N
               , languages                         :: [Lang]
@@ -154,7 +154,14 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
 
     <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
     <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
-    <td.compact style="width:20%" title="#{getThing colLangFi c}">#{getThing colLangFi c}
+    <td.compact style="width:20%;font-family:monospace" title="#{getThing colLang c}">
+      $case T.words (getThing colLang c)
+        $of []
+        $of xs
+            <b>#{head xs}
+            $if null $ tail xs
+            $else
+                (#{T.intercalate ", " $ tail xs})
       $maybe p <- getThingMaybe colWebsite c
         $if not (T.null p)
             \ #
@@ -293,9 +300,8 @@ updateHiddenDivs = function() {
 
 toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
 toCourse Config{..} cats hs iscur xs =
-    (cats, Map.adjust getLang colLang $
+    (cats, Map.adjust doLang colLang $
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
-           Map.insert colLangFi fiLangs $
            Map.insert colLukukausi lukukausi vals)
   where vals      = Map.fromList $ zip hs $ map normalize xs
 
@@ -310,14 +316,11 @@ toCourse Config{..} cats hs iscur xs =
             | "kesä"  `T.isInfixOf` x                  = Just "kesä"
             | otherwise                                = Nothing
 
-        getLang x | x == "suomi"                                   = "fi"
-                  | "suomi" `T.isInfixOf` x, "eng" `T.isInfixOf` x = "fi, en"
-                  | "eng"   `T.isInfixOf` x                        = "en"
-                  | otherwise                                      = "fi, en, se"
-
-        fiLangs = case Map.lookup colLang vals of
-                      Just x  -> x -- T.replace "fi" "suomi" $ T.replace "en" "englanti" $ T.replace "se" "ruotsi" x
-                      Nothing -> "?"
+doLang :: Text -> Text
+doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "en"
+       . T.replace "ruotsi" "se"
+       . T.unwords . T.words
+       . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
 -- | Accumulate a category to list of categories based on what categories
 -- cannot overlap
@@ -382,7 +385,7 @@ processTable cnf c = case cells of
         let headers       = mapMaybe getHeader header
             (_, mcourses) = L.mapAccumL (getRow cnf headers) [] xs
         in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
-    _ -> Nothing
+    _               -> Nothing
   where
     cells = map ($/ element "td") (c $// element "tr")
 
