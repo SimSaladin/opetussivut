@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -20,26 +21,26 @@
 --     /english/studying/{...}.body
 --
 ------------------------------------------------------------------------------
-module Main (main) where
+module Main where
 
 import Prelude
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Reader
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
+import           Data.Char
 import           Data.Function              (on)
 import qualified Data.List          as L
 import           Data.Map                   (Map)
 import qualified Data.Map           as Map
 import           Data.Maybe
 import           Data.Monoid                ((<>))
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Text                  (Text)
 import qualified Data.Text          as T
-import qualified Data.Text.IO       as T
 import qualified Data.Text.Lazy     as LT
 import qualified Data.Text.Lazy.IO  as LT
 import           Data.Text.Lazy.Encoding as LT
+import           Data.Text.ICU.Convert
 import qualified Data.Yaml          as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
 import           Text.Blaze.Html            (preEscapedToHtml)
@@ -49,19 +50,23 @@ import           Text.Julius
 import           Text.Regex
 import qualified Text.XML           as XML
 import           Text.XML.Cursor
+import           Text.Markdown
 import           Debug.Trace
 import           Data.Time
 import           System.Exit (exitFailure)
 import           System.IO.Unsafe (unsafePerformIO) -- pure getCurrentTime
 import           System.Environment (getArgs)
+import           System.Directory
 import           GHC.Generics
 
 main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
-  where go = do Config{..} <- ask
-                forM_ pages $ \pc@PageConf{..} -> do
-                    table <- getData pageId >>= parseTable
-                    forM_ languages $ \lang -> renderTable lang pc table
+    where
+  go = do
+      config@Config{..} <- ask
+      forM_ pages $ \pc@PageConf{..} -> do
+          table <- getData pageId >>= parseTable
+          forM_ languages $ \lang -> renderTable lang pc table
 
 -- * Types
 
@@ -73,16 +78,17 @@ data PageConf = PageConf
               , pageTitle :: Map Lang Text
               } deriving Generic
 data Config   = Config
-              { fetchUrl                          :: String
-              , cacheDir                          :: FilePath
+              { fetchUrl, cacheDir, oodiNameFile  :: FilePath
               , pages                             :: [PageConf]
               , colCode, colLang, colCourseName
-              , colRepeats, colPeriod, colWebsite :: Text
+              , colRepeats, colPeriod, colWebsite
               , colLukukausi, classCur            :: Text
               , categories                        :: [[Text]]
               , i18n                              :: I18N
               , languages                         :: [Lang]
+              , newLayout                         :: Bool
               } deriving Generic
+
 instance Yaml.FromJSON PageConf
 instance Yaml.FromJSON Config
 
@@ -103,10 +109,27 @@ toFilePath :: Text -> FilePath
 toFilePath = T.unpack . ("testi" <>) . (<> ".body")
 
 -- | A hack, for confluence html is far from the (strictly) spec.
+--
+-- weboodi's html is just horrible (imo it's not even html), so we use
+-- another regex to parse it (and not with the xml parser).
 regexes :: [String -> String]
 regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
+
+getOodiName :: Text -> Maybe Text
+getOodiName = fmap (T.pack
+                   . sub "&aring;" "å"
+                   . sub "&auml;" "ä"
+                   . sub "&ouml;" "ö"
+                   . sub "&Ouml;" "Å"
+                   . sub "&#x3a;" ":"
+                   . sub "&#x28;" "("
+                   . sub "&#x29;" ")"
+                   . head)
+            . matchRegex (mkRegexWithOpts s True False) . T.unpack
+    where s = "tauluotsikko\"?>[0-9 ]*(.*),[^,]*<"
+          sub a b i = subRegex (mkRegexWithOpts a False True) i b
 
 toLang :: I18N -> Lang -> Text -> Text
 toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
@@ -123,6 +146,24 @@ normalize =
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
     . T.unwords . map (T.unwords . T.words) . T.lines
 
+weboodiLang :: Lang -> Text
+weboodiLang "fi" = "1"
+weboodiLang "se" = "2"
+weboodiLang "en" = "6"
+weboodiLang _    = ""
+
+weboodiLink :: Lang -> Text -> Text
+weboodiLink lang pid = "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
+    <> weboodiLang lang <> "&Tunniste=" <> pid
+     
+readOodiNames :: M (Map (Lang, Text) Text)
+readOodiNames = do
+    Config{..} <- ask
+    exists <- liftIO $ doesFileExist oodiNameFile
+    if exists
+        then liftIO $ read <$> readFile oodiNameFile
+        else return Map.empty
+
 -- * Rendering
 
 renderTable :: Lang -> PageConf -> Table -> M ()
@@ -134,28 +175,36 @@ renderTable lang pc@PageConf{..} table =
 
 -- | How to render the data
 tableBody :: Lang -> PageConf -> Table -> Config -> Html
-tableBody lang PageConf{..} (Table time _ stuff) cnf@Config{..} =
-        let ii             = toLang i18n lang
-            getLang        = getThingLang i18n
+tableBody lang page (Table time _ stuff) cnf@Config{..} =
+        let ii                       = toLang i18n lang
+            getLang                  = getThingLang i18n
+            translateCourseName code = unsafePerformIO $
+                runReaderT (i18nCourseNameFromOodi lang code) cnf
+
+-- course category div -------------------------------------------------
             withCat n xs f = [shamlet|
 $forall ys <- L.groupBy (catGroup cnf n) xs
     <div.courses>
         #{ppCat n ys}
         #{f ys}
 |]
-            -- course table
+-- course table --------------------------------------------------------
             go 4 xs        = [shamlet|
 <table style="width:100%">
  $forall c <- xs
   <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
     <td style="width:10%">
-      <a href="https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=1&Tunniste=#{getThing colCode c}">
+      <a href="#{weboodiLink lang $ getThing colCode c}">
         <b>#{getThing colCode c}
 
-    <td style="width:55%">#{getLang lang colCourseName c} #
+    <td style="width:55%">
+      $maybe name <- translateCourseName (getThing colCode c)
+        #{name}
+      $nothing
+        #{getThing colCourseName c}
       $with op <- getThing "op" c
           $if not (T.null op)
-               (#{op} #{ii "op"})
+            \ (#{op} #{ii "op"})
 
     <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
     <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
@@ -173,7 +222,8 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
             <a href="#{p}">#{ii colWebsite}
 |]
             go n xs        = withCat n xs (go (n + 1))
-----
+
+-- if it begins with a number, apply appropriate header ---------------
             ppCat n xs     = [shamlet|
 $maybe x <- catAt cnf n (head xs)
     $case n
@@ -193,13 +243,25 @@ $maybe x <- catAt cnf n (head xs)
         $of _
             <b>#{ii x}
             |]
-----
+
+-- put everything together --------------------------------------------
         in [shamlet|
-\<!-- title: #{lookup' lang pageTitle} -->
-\<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" pageUrl} -->
-\<!-- se (Svensk version): #{toUrlPath $ lookup' "se" pageUrl} -->
-\<!-- en (English version): #{toUrlPath $ lookup' "en" pageUrl} -->
+\<!-- title: #{lookup' lang $ pageTitle page} -->
+\<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" $ pageUrl page} -->
+\<!-- se (Svensk version): #{toUrlPath $ lookup' "se" $ pageUrl page} -->
+\<!-- en (English version): #{toUrlPath $ lookup' "en" $ pageUrl page} -->
 \ 
+
+<p>
+  $with pg <- head pages
+    <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+  $forall pg <- tail pages
+    \ | 
+    <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+
+<p>
+  #{markdown def $ LT.fromStrict $ ii "aputeksti"}
+
 <p>
   #{ii "Kieli"}:&nbsp;
   <select id="select-kieli" name="kieli" onchange="updateList(this)">
@@ -219,8 +281,6 @@ $maybe x <- catAt cnf n (head xs)
      <option value="kevät" >#{ii "Kevät"}
      <option value="syksy" >#{ii "Syksy"}
      <option value="kesä"  >#{ii "Kesä"}
-<p>
-  #{ii "aputeksti"}
 
 <table style="width:100%">
     <tr>
@@ -306,6 +366,7 @@ updateHiddenDivs = function() {
 toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
 toCourse Config{..} cats hs iscur xs =
     (cats, Map.adjust doLang colLang $
+           Map.adjust doRepeats colRepeats $
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
            Map.insert colLukukausi lukukausi vals)
   where vals      = Map.fromList $ zip hs $ map normalize xs
@@ -319,6 +380,10 @@ toCourse Config{..} cats hs iscur xs =
             | "syksy" `T.isInfixOf` x                  = Just "syksy"
             | "kesä"  `T.isInfixOf` x                  = Just "kesä"
             | otherwise                                = Nothing
+
+doRepeats :: Text -> Text
+doRepeats x | T.any isLetter x = "-"
+            | otherwise        = x
 
 doLang :: Text -> Text
 doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "en"
@@ -358,25 +423,46 @@ getThingLang :: I18N -> Lang -> Text -> Course -> Text
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
 -- * Get source
+    
+parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
 -- | Fetch a confluence doc by id.
 getData :: String -> M XML.Document
 getData pid = do
-    liftIO . putStrLn $ "Fetching doc id " <> show pid
     Config{..} <- ask
     xs         <- lift getArgs
-
-    let parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-        file          = cacheDir <> "/" <> pid <> ".html"
+    let file   = cacheDir <> "/" <> pid <> ".html"
 
     str <- lift $ case xs of
-        ["file"]  -> LT.readFile file
-        ["fetch"] -> do r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pid)
-                        LT.writeFile file r
-                        return r
-        _         -> putStrLn "Usage: opetussivut < fetch | file >" >> exitFailure
+        "cache" : _ -> LT.readFile file
+        "fetch" : _ -> do liftIO . putStrLn $ "Fetching doc id " <> show pid
+                          r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pid)
+                          LT.writeFile file r
+                          return r
+        _           -> putStrLn "Usage: opetussivut <fetch|cache>" >> exitFailure
 
-    return $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes $ LT.unpack str
+    return $ cleanAndParse str
+
+cleanAndParse :: LT.Text -> XML.Document
+cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
+
+fetch8859 :: String -> IO Text
+fetch8859 url = toUnicode <$> open "iso-8859-1" Nothing
+                          <*> (LBS.toStrict <$> simpleHttp url)
+
+i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
+i18nCourseNameFromOodi lang pid = do
+    Config{..} <- ask
+    oodiNames <- readOodiNames
+    case Map.lookup (lang, pid) oodiNames of
+        Just name -> return $ Just name
+        Nothing   -> do
+            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink lang pid)
+            case getOodiName raw of
+                Nothing   -> return Nothing
+                Just name -> do
+                    liftIO . writeFile oodiNameFile . show $ Map.insert (lang, pid) name oodiNames
+                    return $ Just name
 
 -- * Parse doc
 
