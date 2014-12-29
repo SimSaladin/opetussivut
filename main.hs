@@ -26,6 +26,8 @@ import Prelude
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Reader
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Function              (on)
 import qualified Data.List          as L
 import           Data.Map                   (Map)
@@ -34,8 +36,10 @@ import           Data.Maybe
 import           Data.Monoid                ((<>))
 import           Data.Text                  (Text)
 import qualified Data.Text          as T
+import qualified Data.Text.IO       as T
 import qualified Data.Text.Lazy     as LT
 import qualified Data.Text.Lazy.IO  as LT
+import           Data.Text.Lazy.Encoding as LT
 import qualified Data.Yaml          as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
 import           Text.Blaze.Html            (preEscapedToHtml)
@@ -70,6 +74,7 @@ data PageConf = PageConf
               } deriving Generic
 data Config   = Config
               { fetchUrl                          :: String
+              , cacheDir                          :: FilePath
               , pages                             :: [PageConf]
               , colCode, colLang, colCourseName
               , colRepeats, colPeriod, colWebsite :: Text
@@ -304,7 +309,6 @@ toCourse Config{..} cats hs iscur xs =
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
            Map.insert colLukukausi lukukausi vals)
   where vals      = Map.fromList $ zip hs $ map normalize xs
-
         lukukausi = fromMaybe "syksy, kevät" $ Map.lookup colPeriod vals >>= toLukukausi
         toLukukausi x
             | x == "I"   || x == "II" || x == "I-II"   = Just "syksy"
@@ -358,14 +362,21 @@ getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang 
 -- | Fetch a confluence doc by id.
 getData :: String -> M XML.Document
 getData pid = do
+    liftIO . putStrLn $ "Fetching doc id " <> show pid
     Config{..} <- ask
     xs         <- lift getArgs
+
     let parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-        file          = "/tmp/" <> pid <> ".html"
-    lift $ case xs of
-        ["fetch"] -> XML.parseLBS_ parseSettings <$> simpleHttp (fetchUrl ++ pid)
-        ["file"]  -> XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes <$> readFile file
+        file          = cacheDir <> "/" <> pid <> ".html"
+
+    str <- lift $ case xs of
+        ["file"]  -> LT.readFile file
+        ["fetch"] -> do r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pid)
+                        LT.writeFile file r
+                        return r
         _         -> putStrLn "Usage: opetussivut < fetch | file >" >> exitFailure
+
+    return $ XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes $ LT.unpack str
 
 -- * Parse doc
 

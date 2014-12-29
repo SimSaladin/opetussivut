@@ -27,6 +27,7 @@ executable opetussivut
                      , ghc-prim
                      , text
                      , containers
+                     , bytestring
                      , http-conduit
                      , xml-conduit
                      , shakespeare >= 2.0

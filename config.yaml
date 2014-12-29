@@ -70,6 +70,9 @@ pages:
          se: "/svenska/studierna/kurser/astronomi"
          en: "/english/studying/courses/astronomy"
 
+# downloaded wiki pages are cached here. NO trailing slash
+cacheDir: "./sivut"
+
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
 fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
 
@@ -81,7 +84,7 @@ colRepeats:    "väli(vuosia)"
 colPeriod:     "periodi" 
 colWebsite:    "kotisivu"
 
-# kevät, kesä, syksy; not in table but generated
+# kevät, kesä, syksy -- not in table but generated
 colLukukausi:  "Lukukausi"
 
 # HTML class of second column td when arranged this year
@@ -175,7 +178,7 @@ i18n:
       en: "Website"
       se: "Hemsida"
    "Taso":
-      en: "Level"
+      en: "Study level"
       se: "Level"
    "opetuskieli":
       fi: "Opetuskieli"
@@ -183,8 +186,8 @@ i18n:
       se: "Språk"
    "väli(vuosia)":
       fi: "Toistuu"
-      en: "Repeats"
-      se: "Upprepar"
+      en: "Interval in years"
+      se: "Intervall"
 
    "en":
       fi: "Englanniksi"
@@ -209,5 +212,17 @@ i18n:
       se: "Alla kurser"
 
    "aputeksti":
-      fi: "Klikkaa kurssikoodista WebOodiin. Harmaat kurssit järjestetään ensi vuonna. Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne."
-      en: "Clicking the course code goes to WebOodi. Courses grayed out are arranged next year. In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc."
+      fi:
+         >
+            Klikkaa kurssikoodista WebOodiin.
+            Harmaat kurssit eivät ole saatavilla tällä lukukaudella (2014-2015).
+            Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne.
+            Mikäli tiedot WebOodissa eivät tyydytä, ota yhteyttä luennoitsijaan.
+            Mikäli luennoitsijan sähköpostia ei löydy, ota yhteys phyinfo@helsinki.fi.
+      en:
+         >
+            Clicking the course code goes to study guide (WebOodi).
+            Courses grayed out are not available this academic year (2014-2015).
+            In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc.
+            If information on the study guide page is not satisfactory for you, please do not hesitate to contact the lecturer.
+            If lecturer email is not available, please contact phyinfo@helsinki.fi.
