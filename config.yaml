@@ -73,9 +73,6 @@ pages:
 # downloaded wiki pages are cached here. NO trailing slash
 cacheDir: "./sivut"
 
-# Output html that is compatible with layout of the new upcoming site.
-newLayout: false
-
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
 fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
 
@@ -237,3 +234,43 @@ i18n:
             If lecturer email is not available, please contact [phyinfo@helsinki.fi](mailto:phyinfo@helsinki.fi).
 
             See dates for the periods I-IV [here](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
+
+   "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)":
+      en: ""
+      se: ""
+   "1. DYNAAMINEN JA FYSIKAALINEN METEOROLOGIA":
+      en: ""
+      se: ""
+   "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)":
+      en: ""
+      se: ""
+   "2. MIKROMETEOROLOGIA JA KEMIALLINEN METEOROLOGIA":
+      en: ""
+      se: ""
+   "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)":
+      en: ""
+      se: ""
+   "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)":
+      en: ""
+      se: ""
+   "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)":
+      en: ""
+      se: ""
+   "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)":
+      en: ""
+      se: ""
+   "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)":
+      en: ""
+      se: ""
+   "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)":
+      en: ""
+      se: ""
+   "A. Ydinaineksen kurssit":
+      en: ""
+      se: ""
+   "B. Erikoistumiskurssit":
+      en: ""
+      se: ""
+   "B. Ydinainesta täydentävät kurssit":
+      en: ""
+      se: ""

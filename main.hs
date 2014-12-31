@@ -86,7 +86,6 @@ data Config   = Config
               , categories                        :: [[Text]]
               , i18n                              :: I18N
               , languages                         :: [Lang]
-              , newLayout                         :: Bool
               } deriving Generic
 
 instance Yaml.FromJSON PageConf
