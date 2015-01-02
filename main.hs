@@ -21,6 +21,7 @@ import Prelude
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Reader
+import           Control.Concurrent.MVar
 import           Codec.Text.IConv
 import           Data.Char
 import           Data.Function              (on)
@@ -29,7 +30,6 @@ import           Data.Map                   (Map)
 import qualified Data.Map           as Map
 import           Data.Maybe
 import           Data.Monoid                ((<>))
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Text                  (Text)
 import qualified Data.Text          as T
 import qualified Data.Text.Lazy     as LT
@@ -57,10 +57,10 @@ main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
     where
   go = do
-      config@Config{..} <- ask
+      Config{..} <- ask
       forM_ pages $ \pc@PageConf{..} -> do
           table <- getData pageId >>= parseTable
-          forM_ languages $ \lang -> renderTable lang pc table
+          forM_ languages $ \lang -> renderTable rootDir lang pc table
 
 -- * Types
 
@@ -72,7 +72,8 @@ data PageConf = PageConf
               , pageTitle :: Map Lang Text
               } deriving Generic
 data Config   = Config
-              { fetchUrl, cacheDir, oodiNameFile  :: FilePath
+              { fetchUrl, cacheDir, oodiNameFile
+              , rootDir                           :: FilePath
               , pages                             :: [PageConf]
               , colCode, colLang, colCourseName
               , colRepeats, colPeriod, colWebsite
@@ -98,8 +99,8 @@ type I18N         = Map Text (Map Lang Text)
 toUrlPath :: Text -> Text
 toUrlPath  = (<> ".html")
 
-toFilePath :: Text -> FilePath
-toFilePath = T.unpack . ("testi" <>) . (<> ".body")
+toFilePath :: FilePath -> Text -> FilePath
+toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 --
@@ -148,6 +149,9 @@ weboodiLang _    = ""
 weboodiLink :: Lang -> Text -> Text
 weboodiLink lang pid = "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
     <> weboodiLang lang <> "&Tunniste=" <> pid
+
+oodiVar :: MVar (Map (Lang, Text) Text)
+oodiVar = unsafePerformIO newEmptyMVar
      
 readOodiNames :: M (Map (Lang, Text) Text)
 readOodiNames = do
@@ -157,12 +161,35 @@ readOodiNames = do
         then liftIO $ read <$> readFile oodiNameFile
         else return Map.empty
 
+i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
+i18nCourseNameFromOodi lang pid = do
+    Config{..} <- ask
+
+    ov <- liftIO $ tryTakeMVar oodiVar
+    oodiNames <- case ov of
+        Just x  -> return x
+        Nothing -> readOodiNames
+    liftIO $ putMVar oodiVar oodiNames
+
+    case Map.lookup (lang, pid) oodiNames of
+        Just name -> return $ Just name
+        Nothing   -> do
+            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink lang pid)
+            case getOodiName raw of
+                Nothing   -> return Nothing
+                Just name -> do
+                    let newNames = Map.insert (lang, pid) name oodiNames
+                    liftIO $ do putMVar oodiVar newNames
+                                writeFile oodiNameFile (show newNames)
+                    return $ Just name
+
+
 -- * Rendering
 
-renderTable :: Lang -> PageConf -> Table -> M ()
-renderTable lang pc@PageConf{..} table =
+renderTable :: FilePath -> Lang -> PageConf -> Table -> M ()
+renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
-  where fp = toFilePath $ lookup' lang pageUrl
+  where fp = toFilePath root $ lookup' lang pageUrl
 
 -- * Content
 
@@ -170,7 +197,6 @@ renderTable lang pc@PageConf{..} table =
 tableBody :: Lang -> PageConf -> Table -> Config -> Html
 tableBody lang page (Table time _ stuff) cnf@Config{..} =
         let ii                       = toLang i18n lang
-            getLang                  = getThingLang i18n
             translateCourseName code = unsafePerformIO $
                 runReaderT (i18nCourseNameFromOodi lang code) cnf
 
@@ -417,6 +443,7 @@ getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang 
 
 -- * Get source
     
+parseSettings :: XML.ParseSettings
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
 -- | Fetch a confluence doc by id.
@@ -441,21 +468,6 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 
 fetch8859 :: String -> IO Text
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
-
-i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
-i18nCourseNameFromOodi lang pid = do
-    Config{..} <- ask
-    oodiNames <- readOodiNames
-    case Map.lookup (lang, pid) oodiNames of
-        Just name -> return $ Just name
-        Nothing   -> do
-            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink lang pid)
-            case getOodiName raw of
-                Nothing   -> return Nothing
-                Just name -> do
-                    liftIO . writeFile oodiNameFile . show $ Map.insert (lang, pid) name oodiNames
-                    return $ Just name
-
 -- * Parse doc
 
 parseTable :: XML.Document -> M Table

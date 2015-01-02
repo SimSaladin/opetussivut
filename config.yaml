@@ -1,3 +1,10 @@
+# where to put output
+rootDir: "testi"
+#rootDir: "/var/www/physics"
+
+# downloaded wiki pages are cached here. NO trailing slash
+cacheDir: "./sivut"
+
 pages:
    -
       pageId: "133436923"
@@ -69,9 +76,6 @@ pages:
          fi: "/opetus/kurssit/tahtitiede"
          se: "/svenska/studierna/kurser/astronomi"
          en: "/english/studying/courses/astronomy"
-
-# downloaded wiki pages are cached here. NO trailing slash
-cacheDir: "./sivut"
 
 # probably needs not change; "pageUrl ++ pageId" is where to get the table
 fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
