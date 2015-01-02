@@ -59,8 +59,12 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
   go = do
       Config{..} <- ask
       forM_ pages $ \pc@PageConf{..} -> do
-          table <- getData pageId >>= parseTable
-          forM_ languages $ \lang -> renderTable rootDir lang pc table
+          dt <- getData pageId
+          case dt of
+              Nothing -> liftIO $ putStrLn "Warning: failed to fetch doc, not updating listing"
+              Just dt' -> do
+                  table <- parseTable dt'
+                  forM_ languages $ \lang -> renderTable rootDir lang pc table
 
 -- * Types
 
@@ -179,7 +183,7 @@ i18nCourseNameFromOodi lang pid = do
                 Nothing   -> return Nothing
                 Just name -> do
                     let newNames = Map.insert (lang, pid) name oodiNames
-                    liftIO $ do swapMVar oodiVar newNames
+                    liftIO $ do _ <- swapMVar oodiVar newNames
                                 writeFile oodiNameFile (show newNames)
                     return $ Just name
 
@@ -447,21 +451,22 @@ parseSettings :: XML.ParseSettings
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
 -- | Fetch a confluence doc by id.
-getData :: String -> M XML.Document
+getData :: String -> M (Maybe XML.Document)
 getData pid = do
     Config{..} <- ask
     xs         <- lift getArgs
     let file   = cacheDir <> "/" <> pid <> ".html"
 
     str <- lift $ case xs of
-        "cache" : _ -> LT.readFile file
+        "cache" : _ -> Just <$> LT.readFile file
         "fetch" : _ -> do liftIO . putStrLn $ "Fetching doc id " <> show pid
                           r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pid)
-                          LT.writeFile file r
-                          return r
+                          if "<title>Log In" `LT.isInfixOf` r
+                              then return Nothing
+                              else LT.writeFile file r >> return (Just r)
         _           -> putStrLn "Usage: opetussivut <fetch|cache>" >> exitFailure
 
-    return $ cleanAndParse str
+    return $ cleanAndParse <$> str
 
 cleanAndParse :: LT.Text -> XML.Document
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
