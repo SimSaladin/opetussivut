@@ -77,8 +77,9 @@ pages:
          se: "/svenska/studierna/kurser/astronomi"
          en: "/english/studying/courses/astronomy"
 
-# probably needs not change; "pageUrl ++ pageId" is where to get the table
-fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
+# "fetchUrl ++ pageId" is where to get the table
+fetchUrl:   "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
+weboodiUrl: "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
 
 # Column names in source table. these must align with `toLower real_col`
 colCode:       "koodi" 

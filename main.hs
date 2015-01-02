@@ -74,6 +74,7 @@ data PageConf = PageConf
 data Config   = Config
               { fetchUrl, cacheDir, oodiNameFile
               , rootDir                           :: FilePath
+              , weboodiUrl                        :: Text
               , pages                             :: [PageConf]
               , colCode, colLang, colCourseName
               , colRepeats, colPeriod, colWebsite
@@ -146,9 +147,8 @@ weboodiLang "se" = "2"
 weboodiLang "en" = "6"
 weboodiLang _    = ""
 
-weboodiLink :: Lang -> Text -> Text
-weboodiLink lang pid = "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
-    <> weboodiLang lang <> "&Tunniste=" <> pid
+weboodiLink :: Text -> Lang -> Text -> Text
+weboodiLink url lang pid = url <> weboodiLang lang <> "&Tunniste=" <> pid
 
 oodiVar :: MVar (Map (Lang, Text) Text)
 oodiVar = unsafePerformIO newEmptyMVar
@@ -174,7 +174,7 @@ i18nCourseNameFromOodi lang pid = do
     case Map.lookup (lang, pid) oodiNames of
         Just name -> return $ Just name
         Nothing   -> do
-            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink lang pid)
+            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink weboodiUrl lang pid)
             case getOodiName raw of
                 Nothing   -> return Nothing
                 Just name -> do
@@ -213,7 +213,7 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
  $forall c <- xs
   <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
     <td style="width:10%">
-      <a href="#{weboodiLink lang $ getThing colCode c}">
+      <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
         <b>#{getThing colCode c}
 
     <td style="width:55%">
