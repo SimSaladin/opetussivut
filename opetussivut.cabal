@@ -29,7 +29,7 @@ executable opetussivut
                      , containers
                      , directory
                      , http-conduit
-                     , bytestring
+                     , bytestring >= 0.10.4
                      , iconv
                      , markdown
                      , xml-conduit
