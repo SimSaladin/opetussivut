@@ -29,8 +29,8 @@ executable opetussivut
                      , containers
                      , directory
                      , http-conduit
-                     , text-icu
                      , bytestring
+                     , iconv
                      , markdown
                      , xml-conduit
                      , shakespeare >= 2.0

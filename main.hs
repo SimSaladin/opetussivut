@@ -6,19 +6,13 @@
 ------------------------------------------------------------------------------
 -- | 
 -- Module         : Main
--- Copyright      : (C) 2014 Samuli Thomasson
+-- Copyright      : (C) 2014-2015 Samuli Thomasson
 -- License        : MIT (see the file LICENSE)
 -- Maintainer     : Samuli Thomasson <samuli.thomasson@paivola.fi>
 -- Stability      : experimental
 -- Portability    : non-portable
 -- 
---     /opetus/kurssit.body
---     /svenska/studierna/kurser.body
---     /english/studying/courses.body
---
---     /opetus/kurssit/{aineopinnot,perusopinnot,muutopinnot,syventavatopinnot}.body
---     /svenska/studierna/{...}.body
---     /english/studying/{...}.body
+-- See config.yaml for configuration.
 --
 ------------------------------------------------------------------------------
 module Main where
@@ -27,6 +21,7 @@ import Prelude
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Reader
+import           Codec.Text.IConv
 import           Data.Char
 import           Data.Function              (on)
 import qualified Data.List          as L
@@ -40,7 +35,6 @@ import qualified Data.Text          as T
 import qualified Data.Text.Lazy     as LT
 import qualified Data.Text.Lazy.IO  as LT
 import           Data.Text.Lazy.Encoding as LT
-import           Data.Text.ICU.Convert
 import qualified Data.Yaml          as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
 import           Text.Blaze.Html            (preEscapedToHtml)
@@ -92,7 +86,7 @@ instance Yaml.FromJSON PageConf
 instance Yaml.FromJSON Config
 
 data Table        = Table UTCTime [Header] [Course]       -- ^ Source table
-                  deriving (Show, Read)
+                    deriving (Show, Read)
 type Header       = Text                                  -- ^ Column headers in source table
 type Course       = ([Category], Map Header ContentBlock) -- ^ A row in source table
 type Category     = Text                                  -- ^ First column in source table
@@ -446,8 +440,7 @@ cleanAndParse :: LT.Text -> XML.Document
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
 
 fetch8859 :: String -> IO Text
-fetch8859 url = toUnicode <$> open "iso-8859-1" Nothing
-                          <*> (LBS.toStrict <$> simpleHttp url)
+fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
 i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
 i18nCourseNameFromOodi lang pid = do
