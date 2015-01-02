@@ -275,6 +275,10 @@ $maybe x <- catAt cnf n (head xs)
 \<!-- en (English version): #{toUrlPath $ lookup' "en" $ pageUrl page} -->
 \ 
 
+\<!-- !!! IMPORTANT !!! -->
+\<!-- THIS PAGE IS GENERATED AUTOMATICALLY -- DO NOT EDIT DIRECTLY! -->
+\<!-- See https://github.com/SimSaladin/opetussivut instead -->
+
 <p>
   $with pg <- head pages
     <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}

@@ -1,6 +1,22 @@
 
 Source <https://github.com/SimSaladin/opetussivut>
 
+# Usage scenarios
+
+This is meant to be completely automated system that generates the web pages
+from corresponding wiki pages. The listings are updated every day at 0.07, or
+when new content is available.
+
+As a user, you just need to edit the wiki pages and **if the page is publicly
+readable** then the website pages will be updated within 24 hours. **Set the
+page as private (not publicly readable)** and the pages will not be generated
+again until you set the page public again. Setting the wiki page private can be
+useful when doing big changes over a longer time period.
+
+# Technical documentation
+
+Usage:
+
     opetussivut <fetch|cache>
 
 To fetch newest listing from wiki and build the pages (and cache results), do
@@ -16,7 +32,7 @@ public. (The cache is *not* then updated nor the pages built.)
 Use a cron entry, like
 
     # ignores warnings from stdin; real errors get printed to stderr
-    7 0 * * *  /usr/local/share/opetussivut/opetussivut fetch >&-
+    7 0 * * *  /usr/local/share/opetussivut/wrapper.sh fetch >&-
 
 ## Configuration
 
