@@ -179,7 +179,7 @@ i18nCourseNameFromOodi lang pid = do
                 Nothing   -> return Nothing
                 Just name -> do
                     let newNames = Map.insert (lang, pid) name oodiNames
-                    liftIO $ do putMVar oodiVar newNames
+                    liftIO $ do swapMVar oodiVar newNames
                                 writeFile oodiNameFile (show newNames)
                     return $ Just name
 
