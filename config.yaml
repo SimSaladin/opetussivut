@@ -1,10 +1,41 @@
-# where to put output
-rootDir: "testi"
+######################################################################
+# Files
+######################################################################
+
+# the website root (/var/www/physics) -- pages (see below) are named as
+# "rootDir/pages.pageUrl[lang]".
+rootDir: "./testi"
 #rootDir: "/var/www/physics"
 
-# downloaded wiki pages are cached here. NO trailing slash
+# Where to cache wiki pages. (NO trailing slash)
 cacheDir: "./sivut"
 
+# The confluence wiki url
+fetchUrl: "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
+
+# Used to fetch i18n course names from weboodi
+weboodiUrl: "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
+
+# We cache i18n names for courses here when we fetch them from weboodi.
+# If the names have changed, please either delete this file or alter its
+# contents. The new i18n names are then fetched on next rebuild.
+oodiNameFile: "./oodi.names"
+
+
+######################################################################
+# Page generation
+######################################################################
+
+# In which languages to generate the pages
+languages:
+   - en
+   - fi
+   - se
+
+# Which wiki pages to use as source and how to name them.
+# - pageId: confluence wiki id
+# - pageTitle: title of the page in different languages
+# - pageUrl: The locations of the page in different languages
 pages:
    -
       pageId: "133436923"
@@ -77,57 +108,11 @@ pages:
          se: "/svenska/studierna/kurser/astronomi"
          en: "/english/studying/courses/astronomy"
 
-# "fetchUrl ++ pageId" is where to get the table
-fetchUrl:   "https://wiki.helsinki.fi/plugins/viewsource/viewpagesrc.action?pageId="
-weboodiUrl: "https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli="
 
-# Column names in source table. these must align with `toLower real_col`
-colCode:       "koodi" 
-colLang:       "opetuskieli" 
-colCourseName: "kurssin nimi" 
-colRepeats:    "väli(vuosia)" 
-colPeriod:     "periodi" 
-colWebsite:    "kotisivu"
-
-# kevät, kesä, syksy -- not in table but generated
-colLukukausi:  "Lukukausi"
-
-# HTML class of second column td when arranged this year
-classCur: "highlight-green"
-
-oodiNameFile: "./oodi.names"
-
-# list of categories
-categories:
-   -
-     - "Perusopinnot"
-     - "Aineopinnot"
-     - "Syventävät opinnot"
-     - "Muut opinnot"
-   - 
-     - "1. "
-     - "2. "
-     - "3. "
-     - "4. "
-     - "5. "
-     - "6. "
-     - "7. "
-     - "8. "
-     - "9. "
-   - 
-     - "Pakolliset opinnot"
-     - "Valinnaiset opinnot"
-   -
-     - "A. "
-     - "B. "
-
-languages:
-   - en
-   - fi
-   - se
-
- # Internationalisation in output. Map text fragments+language pairs to
- # i18n texts
+######################################################################
+# Internationalisation in output. Map text fragments+language pairs to
+# i18n texts
+######################################################################
 i18n:
    "Perusopinnot":
       en: "Basic studies"
@@ -240,42 +225,115 @@ i18n:
 
             See dates for the periods I-IV [here](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
 
+      se:
+         >
+            Klicka på kurskoden för att besöka WebOodi
+            De gråa kurserna är inte tillgängliga det här läsåret (2014-2015)
+            Förutom de här kurserna kan man vid institutionen för fysik även studera
+            fakultetens gemensamma studier, biämnesstudier, språkstudier osv.
+
+            Om informationen i WebOodi är bristfällig, kontakta föreläsaren.
+            Om föreläsaren inte har en e-postadress, kontakta
+            [phyinfo@helsinki.fi](mailto:phyinfo@helsinki.fi).
+
+            Se föreläsningsperioderna
+            [här](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
+
    "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)":
       en: "Aerosol and environmental physics"
-      se: ""
+      se: "Aerosol- och miljöfysik"
+
    "1. DYNAAMINEN JA FYSIKAALINEN METEOROLOGIA":
-      en: "Dynamic and physical meteorology"
-      se: ""
+      fi: "1. Dynaaminen ja fysikaalinen meteorologia"
+      en: "1. Dynamic and physical meteorology"
+      se: "1. DYNAMISK OCH FYSIKALISK METEOROLOGI"
+
    "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)":
-      en: "Space physics"
-      se: ""
+      en: "2. Space physics"
+      se: "2. Rymdfysik"
+
    "2. MIKROMETEOROLOGIA JA KEMIALLINEN METEOROLOGIA":
-      en: "Micrometeorology and chemical meteorology"
-      se: ""
+      fi: "2. Mikrometeorologia ja kemiallinen meteorologia"
+      en: "2. Micrometeorology and chemical meteorology"
+      se: "2. Mikrometeorologi och kemikalisk meteorologi"
+
    "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)":
-      en: "Bio-medical physics"
-      se: ""
+      en: "3. Bio-medical physics"
+      se: "3. Bio- och medicinsk fysik"
+
    "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)":
-      en: "Electronics and industry applications"
-      se: ""
+      en: "4. Electronics and industry applications"
+      se: "4. Elektronik och industritillämpningar"
+
    "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)":
-      en: "Particle and nuclear physics, and cosmology"
-      se: ""
+      en: "5. Particle and nuclear physics, and cosmology"
+      se: "5. Partikel- och kärnfysik och kosmologi"
+
    "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)":
-      en: "Computational physics"
-      se: ""
+      en: "6. Computational physics"
+      se: "6. Beräkningsfysik"
+
    "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)":
-      en: "Material and nano-physics"
-      se: ""
+      en: "7. Material and nano-physics"
+      se: "7. Material- och nanofysik"
+
    "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)":
-      en: "Solid earth geophysics"
-      se: ""
+      en: "8. Solid earth geophysics"
+      se: "8. Fasta jordens geofysik"
+
    "A. Ydinaineksen kurssit":
-      en: "Core material courses"
-      se: ""
+      en: "A. Core material courses"
+      se: "A. Kärnstudiernas kurser"
+
    "B. Erikoistumiskurssit":
-      en: "Specialization courses"
-      se: ""
+      en: "B. Specialization courses"
+      se: "B. Specialiseringskurser"
+
    "B. Ydinainesta täydentävät kurssit":
-      en: "Core material complementing courses"
-      se: ""
+      en: "B. Core material complementing courses"
+      se: "B. Kärnstudiernas fördjupade kurser"
+
+
+######################################################################
+# The wiki table
+######################################################################
+
+# List of lists of categories: Every sublist should contain categories that
+# exclude each other. The first sublist (in order) is the most relevant grouping
+# (the highest categories), the second is a subgroup of the first and so on.
+categories:
+   -
+     - "Perusopinnot"
+     - "Aineopinnot"
+     - "Syventävät opinnot"
+     - "Muut opinnot"
+   - 
+     - "1. "
+     - "2. "
+     - "3. "
+     - "4. "
+     - "5. "
+     - "6. "
+     - "7. "
+     - "8. "
+     - "9. "
+   - 
+     - "Pakolliset opinnot"
+     - "Valinnaiset opinnot"
+   -
+     - "A. "
+     - "B. "
+
+# Column names in source table. these must align with `toLower real_col`
+colCode:       "koodi" 
+colLang:       "opetuskieli" 
+colCourseName: "kurssin nimi" 
+colRepeats:    "väli(vuosia)" 
+colPeriod:     "periodi" 
+colWebsite:    "kotisivu"
+
+# kevät, kesä, syksy -- NOT actually in the table but generated from colPeriod
+colLukukausi:  "Lukukausi"
+
+# HTML class of second column td when that course IS arranged this year
+classCur:      "highlight-green"
