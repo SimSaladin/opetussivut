@@ -8,7 +8,7 @@ from corresponding wiki pages. The pages are updated at midnight if edits
 were made to corresponding wiki page since last update.
 
 As a user (wiki editor), you just edit the wiki pages as before.
-(Note that we assume [some of the column names](https://github.com/SimSaladin/opetussivut/blob/master/config.yaml#L327-L333).)
+(Note: we assume [some of the column names](https://github.com/SimSaladin/opetussivut/blob/master/config.yaml#L327-L333).)
 Generation of the HTML pages is controlled via the visibility setting of the wiki page:
 
 - Set the wiki page as *publicly readable* and the website will be updated
