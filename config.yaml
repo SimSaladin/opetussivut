@@ -80,9 +80,9 @@ pages:
    -
       pageId: "133439148"
       pageTitle:
-         fi: "Vesivaipan geofysiikka"
-         se: "Geophysics" # TODO
-         en: "Geofysik"
+         fi: "Geofysiikka"
+         se: "Geofysik"
+         en: "Geophysics"
       pageUrl:
          fi: "/opetus/kurssit/vesivaipan_geofysiikka"
          se: "/svenska/studierna/kurser/geofysik"
@@ -138,8 +138,9 @@ i18n:
       en: "All"
       se: "Allt"
    "Kieli":
-      en: "Language"
-      se: "Språk"
+      fi: "Opetuskieli"
+      en: "Language of teaching"
+      se: "Undervisningsspråk"
    "Kevät":
       en: "Spring"
       se: "Vår"
@@ -151,12 +152,15 @@ i18n:
       se: "Sommar"
 
    "koodi":
+      fi: "Koodi"
       en: "Code"
       se: "Kod"
    "kurssin nimi":
+      fi: "Kurssin nimi"
       en: "Course name"
       se: "Kursnamn"
    "periodi":
+      fi: "Periodi"
       en: "Semester"
       se: "Termin"
    "Lukukausi":
@@ -174,8 +178,8 @@ i18n:
       se: "Level"
    "opetuskieli":
       fi: "Opetuskieli"
-      en: "Language"
-      se: "Språk"
+      en: "Language of teaching"
+      se: "Undervisningsspråk"
    "väli(vuosia)":
       fi: "Toistuu"
       en: "Interval in years"
@@ -227,7 +231,7 @@ i18n:
 
       se:
          >
-            Klicka på kurskoden för att besöka WebOodi
+            Klicka på kurskoden för att besöka WebOodi.
             De gråa kurserna är inte tillgängliga det här läsåret (2014-2015)
             Förutom de här kurserna kan man vid institutionen för fysik även studera
             fakultetens gemensamma studier, biämnesstudier, språkstudier osv.
