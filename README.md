@@ -18,6 +18,13 @@ the HTML pages is controlled via the visibility setting of the wiki page:
 Setting the wiki page private can be useful when doing big changes over a longer
 time period.
 
+---
+
+If you add something to a wiki page that should be translated in the generated
+HTML, add the translations to the `i18n` section in `config.yaml` on the server
+(the default location of the configuration is
+`/usr/local/share/opetussivut/config.yaml`).
+
 # Technical documentation
 
 (When reinstalling or otherwise tweaking)
