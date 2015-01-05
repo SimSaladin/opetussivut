@@ -120,11 +120,14 @@ getOodiName :: Text -> Maybe Text
 getOodiName = fmap (T.pack
                    . sub "&aring;" "å"
                    . sub "&auml;" "ä"
+                   . sub "&Aring;" "Å"
+                   . sub "&Auml;" "Ä"
                    . sub "&ouml;" "ö"
                    . sub "&Ouml;" "Å"
                    . sub "&#x3a;" ":"
                    . sub "&#x28;" "("
                    . sub "&#x29;" ")"
+                   . sub "&#x3b;" ";"
                    . head)
             . matchRegex (mkRegexWithOpts s True False) . T.unpack
     where s = "tauluotsikko\"?>[0-9 ]*(.*),[^,]*<"
