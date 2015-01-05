@@ -31,13 +31,19 @@ server (the default location of the configuration is
 
 If you need to change the wiki page used for some of the listings, then add swap
 the new wiki page ID in `config.yaml`. The ID is found as follows: go to the
-wiki page in your browser, and choose Tools > Page Information. Now the url bar
+wiki page in your browser and choose **Tools > Page Information**. Now the URL bar
 should look like
 
     https://wiki.helsinki.fi/pages/viewinfo.action?pageId=100000000
                                                           ^^^^^^^^^
 
-where the ID is above the `^`'s.
+where the ID is above the `^`'s. Now swap that with the page id you want to
+replace in `config.yaml`.
+
+Similarly, if you want to add a completely new page, add a corresponding
+`(pageId, pageTitle, pageUrl)`-block in the `config.yaml`. You can test the
+html generation by running `./wrapper.sh fetch` in the same directory as
+`config.yaml`.
 
 # Technical documentation
 
