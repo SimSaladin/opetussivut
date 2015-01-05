@@ -1,7 +1,7 @@
 
 Source: <https://github.com/SimSaladin/opetussivut>
 
-# Usage scenarios
+# User guide
 
 This is meant to be completely automated system that generates the web pages
 from corresponding wiki pages. The pages are updated at midnight if edits
