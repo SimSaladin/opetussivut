@@ -27,6 +27,17 @@ server (the default location of the configuration is
 `/usr/local/share/opetussivut/config.yaml`). See that section for
 [examples](https://github.com/SimSaladin/opetussivut/blob/master/config.yaml#L116).
 
+---
+
+If you need to change the wiki page used for some of the listings, then add swap
+the new wiki page ID in `config.yaml`. The ID is found as follows: go to the
+wiki page in your browser, and choose Tools > Page Information. Now the url bar
+should look like
+
+    https://wiki.helsinki.fi/pages/viewinfo.action?pageId=**100000000**
+
+where the ID is **bolded**.
+
 # Technical documentation
 
 (When reinstalling or otherwise tweaking)
