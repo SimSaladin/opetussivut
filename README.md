@@ -1,19 +1,26 @@
 
-Source <https://github.com/SimSaladin/opetussivut>
+Source: <https://github.com/SimSaladin/opetussivut>
 
 # Usage scenarios
 
 This is meant to be completely automated system that generates the web pages
-from corresponding wiki pages. The listings are updated every day at 0.07, or
-when new content is available.
+from corresponding wiki pages. The pages are updated at midnight if edits
+were made to corresponding wiki page since last update.
 
-As a user, you just need to edit the wiki pages and **if the page is publicly
-readable** then the website pages will be updated within 24 hours. **Set the
-page as private (not publicly readable)** and the pages will not be generated
-again until you set the page public again. Setting the wiki page private can be
-useful when doing big changes over a longer time period.
+As a user (wiki editor), you just edit the wiki pages as before. Generation of
+the HTML pages is controlled via the visibility setting of the wiki page:
+
+- **Set the wiki page as publicly readable** and the website will be updated
+  within 24 hours.
+- **Set the wiki page as not publicly readable** and the pages will not be
+  generated again until you set the page public again.
+
+Setting the wiki page private can be useful when doing big changes over a longer
+time period.
 
 # Technical documentation
+
+(When reinstalling or otherwise tweaking)
 
 Usage:
 
@@ -39,7 +46,7 @@ Use a cron entry, like
 Configuration is read from `./config.yaml`. See that file for configurable
 parameters.
 
-## Changing the layout
+## Changing the HTML layout
 
 If you want to change the output HTML, see `tableBody` function in `main.hs`.
 It's *hamlet* syntax: just omit any end tags and indicate nesting with
