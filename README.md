@@ -10,9 +10,9 @@ were made to corresponding wiki page since last update.
 As a user (wiki editor), you just edit the wiki pages as before. Generation of
 the HTML pages is controlled via the visibility setting of the wiki page:
 
-- **Set the wiki page as publicly readable** and the website will be updated
+- Set the wiki page as *publicly readable* and the website will be updated
   within 24 hours.
-- **Set the wiki page as not publicly readable** and the pages will not be
+- Set the wiki page as *not* publicly readable and the pages will not be
   generated again until you set the page public again.
 
 Setting the wiki page private can be useful when doing big changes over a longer
