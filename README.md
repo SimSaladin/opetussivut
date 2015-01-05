@@ -61,6 +61,13 @@ Or to rebuild the pages from the cache, do `opetussivut cache`.
 When fetching from wiki, we ignore the result if the page is **hidden** from
 public. (The cache is *not* then updated nor the pages built.)
 
+In deployment, we use a `wrapper.sh` script over the `opetussivut`-binary. The
+wrapper executes the binary in right working directory and provides it correct
+dynamic libraries (`libgmp` in ./lib). All this must be in the same directory,
+i.e. so that there is a directory that contains files `wrapper.sh`, opetussivut
+binary as `update`, `config.yaml`, and a directory named `sivut`, and that the
+directories are writable by the user that executes the wrapper.
+
 ## Automatic execution
 
 Use a cron entry, like
