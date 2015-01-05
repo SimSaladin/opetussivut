@@ -20,9 +20,9 @@ time period.
 
 ---
 
-If you add something to a wiki page that should be translated in the generated
-HTML, add the translations to the `i18n` section in `config.yaml` on the server
-(the default location of the configuration is
+If you add something that should be translated to a wiki page in its generated
+html, then add the translations to the `i18n` section in `config.yaml` on the
+server (the default location of the configuration is
 `/usr/local/share/opetussivut/config.yaml`).
 
 # Technical documentation
