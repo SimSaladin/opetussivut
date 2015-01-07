@@ -84,7 +84,7 @@ parameters.
 
 If you want to change the output HTML, see `tableBody` function in `main.hs`.
 It's *hamlet* syntax: just omit any end tags and indicate nesting with
-indendation. Editing `main.hs` requires recompilation: `cabal install -fstatic`
+indendation. Editing `main.hs` requires recompilation: `cabal install`
 in its containing directory (assumes GHC and cabal-install installed). The new
 binary is then found in `~/.cabal/bin/opetussivut`, from where you can copy it
 to the deployment server.

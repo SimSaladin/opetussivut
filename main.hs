@@ -125,6 +125,7 @@ getOodiName = fmap (T.pack
                    . sub "&ouml;" "ö"
                    . sub "&Ouml;" "Å"
                    . sub "&#x3a;" ":"
+                   . sub "&#x27;" "'"
                    . sub "&#x28;" "("
                    . sub "&#x29;" ")"
                    . sub "&#x3b;" ";"
