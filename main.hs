@@ -116,6 +116,23 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
+toLang :: I18N -> Lang -> Text -> Text
+toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
+                           (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
+  where fallback | "fi" <- lang = key
+                 | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
+
+lookup' :: Lang -> Map Lang y -> y
+lookup' i = fromJust . Map.lookup i
+
+normalize :: Text -> Text
+normalize =
+    T.dropAround (`elem` " ,-!")
+    . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
+    . T.unwords . map (T.unwords . T.words) . T.lines
+
+-- * Weboodi stuff
+
 getOodiName :: Text -> Maybe Text
 getOodiName = fmap (T.pack
                    . sub "&aring;" "å"
@@ -134,21 +151,6 @@ getOodiName = fmap (T.pack
     where s = "tauluotsikko\"?>[0-9 ]*(.*),[^,]*<"
           sub a b i = subRegex (mkRegexWithOpts a False True) i b
 
-toLang :: I18N -> Lang -> Text -> Text
-toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
-                           (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
-  where fallback | "fi" <- lang = key
-                 | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
-
-lookup' :: Lang -> Map Lang y -> y
-lookup' i = fromJust . Map.lookup i
-
-normalize :: Text -> Text
-normalize =
-    T.dropAround (`elem` " ,-!")
-    . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
-    . T.unwords . map (T.unwords . T.words) . T.lines
-
 weboodiLang :: Lang -> Text
 weboodiLang "fi" = "1"
 weboodiLang "se" = "2"
@@ -160,6 +162,7 @@ weboodiLink url lang pid = url <> weboodiLang lang <> "&Tunniste=" <> pid
 
 oodiVar :: MVar (Map (Lang, Text) Text)
 oodiVar = unsafePerformIO newEmptyMVar
+{-# NOINLINE oodiVar #-}
      
 readOodiNames :: M (Map (Lang, Text) Text)
 readOodiNames = do
@@ -225,17 +228,19 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
         <b>#{getThing colCode c}
 
     <td style="width:55%">
+
       $maybe name <- translateCourseName (getThing colCode c)
         #{name}
       $nothing
         #{getThing colCourseName c}
+
       $with op <- getThing "op" c
           $if not (T.null op)
             \ (#{op} #{ii "op"})
 
     <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
     <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
-    <td.compact style="width:20%;font-family:monospace" title="#{getThing colLang c}">
+    <td.compact style="width:8%;font-family:monospace" title="#{getThing colLang c}">
       $case T.words (getThing colLang c)
         $of []
         $of xs
@@ -243,6 +248,8 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
             $if null $ tail xs
             $else
                 (#{T.intercalate ", " $ tail xs})
+
+    <td.compact style="width:12%" title="#{getThing colWebsite}">
       $maybe p <- getThingMaybe colWebsite c
         $if not (T.null p)
             \ #
@@ -315,11 +322,12 @@ $maybe x <- catAt cnf n (head xs)
 
 <table style="width:100%">
     <tr>
-        <td style="width:10%">#{ii colCode}
-        <td style="width:55%">#{ii colCourseName}
-        <td style="width:7%" >#{ii colPeriod}
-        <td style="width:7%" >#{ii colRepeats}
-        <td style="width:20%">#{ii colLang}
+        <td style="padding-left:0.5em;width:10%">#{ii colCode}
+        <td style="padding-left:0.5em;width:55%">#{ii colCourseName}
+        <td style="padding-left:0.5em;width:7%" >#{ii colPeriod}
+        <td style="padding-left:0.5em;width:7%" >#{ii colRepeats}
+        <td style="padding-left:0.5em;width:8%" >#{ii colLang}
+        <td style="padding-left:0.5em;width:12%">#{ii colWebsite}
 
 #{withCat 0 stuff (go 1)}
 
@@ -481,6 +489,7 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 
 fetch8859 :: String -> IO Text
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
+
 -- * Parse doc
 
 parseTable :: XML.Document -> M Table
@@ -503,9 +512,10 @@ processTable cnf c = case cells of
   where
     cells = map ($/ element "td") (c $// element "tr")
 
--- | A row is either a category or course
+-- | A row is either a category or course. The @[Category]@ is used as an
+-- accumulator.
 getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
-getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` ((cs !! 1 $| attribute "class") !! 0)
+getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
     where go []        _       = error "Encountered an empty row in the table!"
           go (mc : vs) classes = case toCategory cnf mc of
                 Just cat                        -> (accumCategory cnf cat cats, Nothing)
