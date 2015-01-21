@@ -516,7 +516,7 @@ processTable cnf c = case cells of
 -- accumulator.
 getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
 getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
-    where go []        _       = error "Encountered an empty row in the table!"
+    where go []        _       = (cats, Nothing)
           go (mc : vs) classes = case toCategory cnf mc of
                 Just cat                        -> (accumCategory cnf cat cats, Nothing)
                 Nothing | null vs               -> (cats, Nothing)
