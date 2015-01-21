@@ -249,7 +249,7 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
             $else
                 (#{T.intercalate ", " $ tail xs})
 
-    <td.compact style="width:12%" title="#{getThing colWebsite}">
+    <td.compact style="width:12%" title="#{colWebsite}">
       $maybe p <- getThingMaybe colWebsite c
         $if not (T.null p)
             \ #
