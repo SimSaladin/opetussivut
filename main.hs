@@ -510,7 +510,7 @@ processTable cnf c = case cells of
         in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
     _               -> Nothing
   where
-    cells = map ($/ element "td") (c $// element "tr")
+    cells = map ($/ anyElement) (c $// element "tr")
 
 -- | A row is either a category or course. The @[Category]@ is used as an
 -- accumulator.
