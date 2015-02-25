@@ -219,7 +219,8 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
         #{f ys}
 |]
 -- course table --------------------------------------------------------
-            go (length categories) xs = [shamlet|
+            go n xs
+                | n == length categories = [shamlet|
 <table style="width:100%">
  $forall c <- xs
   <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
@@ -255,7 +256,7 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
             \ #
             <a href="#{p}">#{ii colWebsite}
 |]
-            go n xs        = withCat n xs (go (n + 1))
+                | otherwise = withCat n xs (go (n + 1))
 
 -- if it begins with a number, apply appropriate header ---------------
             ppCat n xs     = [shamlet|

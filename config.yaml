@@ -139,7 +139,7 @@ i18n:
       se: "Allt"
    "Kieli":
       fi: "Opetuskieli"
-      en: "Language of teaching"
+      en: "Teaching language"
       se: "Undervisningsspråk"
    "Kevät":
       en: "Spring"
@@ -152,17 +152,17 @@ i18n:
       se: "Sommar"
 
    "koodi":
-      fi: "Koodi"
-      en: "Code"
-      se: "Kod"
+      fi: "WebOodi-koodi"
+      en: "WebOodi code"
+      se: "WebOodi-kod"
    "kurssin nimi":
       fi: "Kurssin nimi"
       en: "Course name"
       se: "Kursnamn"
    "periodi":
-      fi: "Periodi"
-      en: "Semester"
-      se: "Termin"
+      fi: "Opetusperiodi"
+      en: "Teaching period"
+      se: "Undervisnings period"
    "Lukukausi":
       en: "Semester"
       se: "Termin"
@@ -171,18 +171,18 @@ i18n:
       se: "ECTS"
    "kotisivu":
       fi: "Sivu"
-      en: "Website"
+      en: "Homepage"
       se: "Hemsida"
    "Taso":
       en: "Study level"
       se: "Level"
    "opetuskieli":
       fi: "Opetuskieli"
-      en: "Language of teaching"
+      en: "Teaching language"
       se: "Undervisningsspråk"
    "väli(vuosia)":
       fi: "Toistuu"
-      en: "Interval in years"
+      en: "Interval between courses (years)"
       se: "Intervall"
 
    "en":
@@ -220,7 +220,7 @@ i18n:
             Katso opetusperiodit [täältä](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
       en:
          >
-            Clicking the course code goes to study guide (WebOodi).
+            Clicking the WebOodi code of the course goes to the study guide ([WebOodi](http://weboodi.helsinki.fi)).
             Courses grayed out are not available this academic year (2014-2015).
             In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc.
 
