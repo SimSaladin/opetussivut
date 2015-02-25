@@ -219,7 +219,7 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
         #{f ys}
 |]
 -- course table --------------------------------------------------------
-            go 4 xs        = [shamlet|
+            go (length categories) xs = [shamlet|
 <table style="width:100%">
  $forall c <- xs
   <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
