@@ -53,6 +53,9 @@ import           System.Environment (getArgs)
 import           System.Directory
 import           GHC.Generics
 
+-- TODO: hard-coded level switch for "Taso" in categories configuration option
+categoryLevelTaso = 1
+
 main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
     where
@@ -223,7 +226,7 @@ $forall ys <- L.groupBy (catGroup cnf n) xs
                 | n == length categories = [shamlet|
 <table style="width:100%">
  $forall c <- xs
-  <tr data-taso="#{fromMaybe "" $ catAt cnf 0 c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
+  <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
     <td style="width:10%">
       <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
         <b>#{getThing colCode c}
@@ -311,7 +314,7 @@ $maybe x <- catAt cnf n (head xs)
   #{ii "Taso"}:&nbsp;
   <select id="select-taso" name="taso" onchange="updateList(this)">
      <option value="any" >#{ii "Kaikki"}
-     $forall cat <- (categories !! 0)
+     $forall cat <- (categories !! categoryLevelTaso)
         <option value="#{cat}">#{ii cat}
 
   #{ii "Lukukausi"}:&nbsp;
