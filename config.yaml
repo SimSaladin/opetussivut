@@ -4,7 +4,7 @@
 
 # the website root (/var/www/physics) -- pages (see below) are named as
 # "rootDir/pages.pageUrl[lang]".
-rootDir: "./testi"
+rootDir: "./test"
 #rootDir: "/var/www/physics"
 
 # Where to cache wiki pages. (NO trailing slash)
@@ -38,14 +38,14 @@ languages:
 # - pageUrl: The locations of the page in different languages
 pages:
    -
-      pageId: "133436923"
+      pageId: "155236781"
       pageTitle:
          fi: "Fysiikka"
          se: "Fysik - Undervisning på finska"
          en: "Physics"
       pageUrl:
          fi: "/opetus/kurssit/fysiikka"
-         se: "/svenska/studierna/kurser/fysik_finska"
+         se: "/svenska/opetus/kurssit/fysiikka"
          en: "/english/studying/courses/physics"
    -
       pageId: "133439230"
@@ -55,17 +55,17 @@ pages:
          en: "Physics - Teaching in Swedish"
       pageUrl:
          fi: "/opetus/kurssit/ruotsinkielinen_fysiikka"
-         se: "/svenska/studierna/kurser/fysik_svenska"
+         se: "/svenska/opetus/kurssit/fysik"
          en: "/english/studying/courses/physics_swedish"
    -
       pageId: "133439202"
       pageTitle:
          fi: "Fysiikan opettajankoulutus"
-         se: "Fysik lärare"
+         se: "Fysiklärare"
          en: "Physics teacher"
       pageUrl:
          fi: "/opetus/kurssit/fysiikan_opettajankoulutus"
-         se: "/svenska/studierna/kurser/fysik_larare_undervisning"
+         se: "/svenska/opetus/kurssit/fysiikan_opettajankoulutus"
          en: "/english/studying/courses/physics_teachers"
    -
       pageId: "133439172"
@@ -75,7 +75,7 @@ pages:
          en: "Theoretical physics"
       pageUrl:
          fi: "/opetus/kurssit/teoreettinen_fysiikka"
-         se: "/svenska/studierna/kurser/teoretisk_fysik"
+         se: "/svenska/opetus/kurssit/teoreettinen_fysiikka"
          en: "/english/studying/courses/theoretical_physics"
    -
       pageId: "133439148"
@@ -85,7 +85,7 @@ pages:
          en: "Geophysics"
       pageUrl:
          fi: "/opetus/kurssit/vesivaipan_geofysiikka"
-         se: "/svenska/studierna/kurser/geofysik"
+         se: "/svenska/opetus/kurssit/vesivaipan_geofysiikka"
          en: "/english/studying/courses/geophysics"
    -
       pageId: "133439021"
@@ -95,7 +95,7 @@ pages:
          en: "Meteorology"
       pageUrl:
          fi: "/opetus/kurssit/meteorologia"
-         se: "/svenska/studierna/kurser/meteorologi"
+         se: "/svenska/opetus/kurssit/meteorologia"
          en: "/english/studying/courses/meteorology"
    -
       pageId: "133439114"
@@ -105,15 +105,21 @@ pages:
          en: "Astronomy"
       pageUrl:
          fi: "/opetus/kurssit/tahtitiede"
-         se: "/svenska/studierna/kurser/astronomi"
+         se: "/svenska/opetus/kurssit/tahtitiede"
          en: "/english/studying/courses/astronomy"
-
 
 ######################################################################
 # Internationalisation in output. Map text fragments+language pairs to
 # i18n texts
 ######################################################################
 i18n:
+   "PÄÄAINEOPETUS":
+      en: "MAJOR SUBJECT STUDIES"
+      se: "HUVUDÄMNESSTUDIER"
+   "SIVUAINEOPETUS":
+      en: "MINOR SUBJECT STUDIES"
+      se: "BIÄMNESSTUDIER"
+
    "Perusopinnot":
       en: "Basic studies"
       se: "Grundstudier"
@@ -168,7 +174,7 @@ i18n:
       se: "Termin"
    "op":
       en: "ECTS"
-      se: "ECTS"
+      se: "sp"
    "kotisivu":
       fi: "Sivu"
       en: "Homepage"
@@ -211,7 +217,7 @@ i18n:
       fi:
          >
             Klikkaa kurssikoodista WebOodiin.
-            Harmaat kurssit eivät ole saatavilla tällä lukukaudella (2014-2015).
+            Harmaat kurssit eivät ole saatavilla tällä lukukaudella (2015-2016).
             Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne.
 
             Mikäli tiedot WebOodissa eivät tyydytä, ota yhteyttä luennoitsijaan.
@@ -221,7 +227,7 @@ i18n:
       en:
          >
             Clicking the WebOodi code of the course goes to the study guide ([WebOodi](http://weboodi.helsinki.fi)).
-            Courses grayed out are not available this academic year (2014-2015).
+            Courses grayed out are not available this academic year (2015-2016).
             In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc.
 
             If information on the study guide page is not satisfactory for you, please do not hesitate to contact the lecturer.
@@ -232,7 +238,7 @@ i18n:
       se:
          >
             Klicka på kurskoden för att besöka WebOodi.
-            De gråa kurserna är inte tillgängliga det här läsåret (2014-2015)
+            De gråa kurserna är inte tillgängliga det här läsåret (2015-2016)
             Förutom de här kurserna kan man vid institutionen för fysik även studera
             fakultetens gemensamma studier, biämnesstudier, språkstudier osv.
 
@@ -296,6 +302,35 @@ i18n:
    "B. Ydinainesta täydentävät kurssit":
       en: "B. Core material complementing courses"
       se: "B. Kärnstudiernas fördjupade kurser"
+      
+# Fix for numbers showing up as warnings in when running program
+   "1. ":
+      en: "1. "
+      se: "1. "
+   "2. ":
+      en: "2. "
+      se: "2. "
+   "3. ":
+      en: "3. "
+      se: "3. " 
+   "4. ":
+      en: "4. "
+      se: "4. "
+   "5. ":
+      en: "5. "
+      se: "5. "
+   "6. ":
+      en: "6. "
+      se: "6. "
+   "7. ":
+      en: "7. "
+      se: "7. "
+   "8. ":
+      en: "8. "
+      se: "8. "
+   "9. ":
+      en: "9. "
+      se: "9. "
 
 
 ######################################################################
@@ -306,6 +341,9 @@ i18n:
 # exclude each other. The first sublist (in order) is the most relevant grouping
 # (the highest categories), the second is a subgroup of the first and so on.
 categories:
+   -
+     - "PÄÄAINEOPETUS"
+     - "SIVUAINEOPETUS"
    -
      - "Perusopinnot"
      - "Aineopinnot"
@@ -341,3 +379,4 @@ colLukukausi:  "Lukukausi"
 
 # HTML class of second column td when that course IS arranged this year
 classCur:      "highlight-green"
+
