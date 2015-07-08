@@ -45,4 +45,4 @@ executable opetussivut
   ghc-options:         -Wall -O
 
   if flag(static)
-   ld-options: -static -pthread
+    ld-options: -static -pthread
