@@ -74,25 +74,40 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
 
 type M = ReaderT Config IO
 type Lang = Text -- ^ en, se, fi, ...
-data PageConf = PageConf
-              { pageId    :: String
-              , pageUrl   :: Map Lang Text
-              , pageTitle :: Map Lang Text
-              } deriving Generic
-data Config   = Config
-              { fetchUrl, cacheDir, oodiNameFile
-              , rootDir                           :: FilePath
-              , weboodiUrl                        :: Text
-              , pages                             :: [PageConf]
-              , colCode, colLang, colCourseName
-              , colRepeats, colPeriod, colWebsite
-              , colLukukausi, classCur            :: Text
-              , categories                        :: [[Text]]
-              , i18n                              :: I18N
-              , languages                         :: [Lang]
-              } deriving Generic
 
+data PageConf = PageConf
+              { 
+              -- | Faculty webpage properties
+                pageId          :: String
+              , pageUrl         :: Map Lang Text
+              , pageTitle       :: Map Lang Text
+              } deriving Generic
 instance Yaml.FromJSON PageConf
+              
+data Config   = Config 
+              { 
+              -- | File handling properties
+                rootDir         :: FilePath
+              , cacheDir        :: FilePath
+              , fetchUrl        :: String
+              , weboodiUrl      :: Text
+              , oodiNameFile    :: FilePath
+              -- | Page generation properties
+              , languages       :: [Lang]
+              , pages           :: [PageConf]
+              -- | Internationalization properties
+              , i18n            :: I18N
+              -- | Wiki Table properties
+              , categories      :: [[Text]]
+              , colCode         :: Text
+              , colLang         :: Text
+              , colCourseName   :: Text
+              , colRepeats      :: Text
+              , colPeriod       :: Text
+              , colWebsite      :: Text
+              , colLukukausi    :: Text                 
+              , classCur        :: Text
+              } deriving Generic
 instance Yaml.FromJSON Config
 
 data Table        = Table UTCTime [Header] [Course]       -- ^ Source table
@@ -102,6 +117,19 @@ type Course       = ([Category], Map Header ContentBlock) -- ^ A row in source t
 type Category     = Text                                  -- ^ First column in source table
 type ContentBlock = Text                                  -- ^ td in source table
 type I18N         = Map Text (Map Lang Text)
+
+{- Note [Config and PageConf]
+    
+    =Config
+    The 'Config' data type is used to read the configuration properties from
+    the 'config.yaml' file. It holds references to all of the different property
+    fields and are accessed by their name in the config.yaml file.
+    
+    =PageConf
+    The 'PageConf' data type is used as a data holder for page information
+    of the generated web pages. Where they are stored, what their titles are
+    etc.
+-}
 
 -- * Utility
 
