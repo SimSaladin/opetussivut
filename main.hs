@@ -17,7 +17,7 @@
 ------------------------------------------------------------------------------
 module Main where
 
-import Prelude
+-- import Prelude
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Reader
