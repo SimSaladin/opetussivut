@@ -54,6 +54,7 @@ import           System.Directory
 import           GHC.Generics
 
 -- TODO: hard-coded level switch for "Taso" in categories configuration option
+categoryLevelTaso :: Int
 categoryLevelTaso = 1
 
 main :: IO ()
