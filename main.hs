@@ -3,6 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
+
 ------------------------------------------------------------------------------
 -- | 
 -- Module         : Main
@@ -12,11 +13,19 @@
 -- Stability      : experimental
 -- Portability    : non-portable
 -- 
--- See config.yaml for configuration.
+-- This application is used to automatically generate web page bodies listing the available courses at the department of physics at the University of Helsinki. The data is parsed from a confluence Wiki Source Table containing the information needed to either directly generate the list or lookup more information from different web sites.
+--
+-- The application takes into consideration internationalization (I18N) for at least Finnish, Swedish and English, more languages might be supported in the future.
+--
+-- The user guide for operating the software can be found at <https://github.com/SimSaladin/opetussivut>
+--
+-- See config.yaml for configuration options.
 --
 ------------------------------------------------------------------------------
+
 module Main where
 
+-- TODO: Remove the unused import?
 -- import Prelude
 import           Control.Monad
 import           Control.Applicative
@@ -53,10 +62,17 @@ import           System.Environment (getArgs)
 import           System.Directory
 import           GHC.Generics
 
+
 -- TODO: hard-coded level switch for "Taso" in categories configuration option
 categoryLevelTaso :: Int
 categoryLevelTaso = 1
 
+
+{-| The entry point of the application.
+
+    It reads the /config.yaml/ file into memory before doing anything else.
+    
+-}
 main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
     where
@@ -70,34 +86,40 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
                   table <- parseTable dt'
                   forM_ languages $ \lang -> renderTable rootDir lang pc table
 
+
+-- ***************************************************************************
 -- * Types
+-- ***************************************************************************
 
+-- | Short hand for the combination of the other three types.
 type M = ReaderT Config IO
-type Lang = Text -- ^ en, se, fi, ...
 
-data PageConf = PageConf
-              { 
-              -- | Faculty webpage properties
+-- | The 'Lang' type is used as key for looking up the translations from the internationalization (I18N) data base found in the /config.yaml/ file.
+type Lang = Text
+-- ^ en, se, fi, ...
+
+-- | Properties for generating individual web page bodies.
+data PageConf = PageConf {  -- See Note [Config and PageConf] below
+              -- Faculty webpage properties
                 pageId          :: String
               , pageUrl         :: Map Lang Text
               , pageTitle       :: Map Lang Text
               } deriving Generic
 instance Yaml.FromJSON PageConf
-              
-data Config   = Config 
-              { 
-              -- | File handling properties
+
+data Config   = Config {    -- See Note [Config and PageConf] below
+              -- File handling properties
                 rootDir         :: FilePath
               , cacheDir        :: FilePath
               , fetchUrl        :: String
               , weboodiUrl      :: Text
               , oodiNameFile    :: FilePath
-              -- | Page generation properties
+              -- Page generation properties
               , languages       :: [Lang]
               , pages           :: [PageConf]
-              -- | Internationalization properties
+              -- Internationalization properties
               , i18n            :: I18N
-              -- | Wiki Table properties
+              -- Wiki Table properties
               , categories      :: [[Text]]
               , colCode         :: Text
               , colLang         :: Text
@@ -110,34 +132,58 @@ data Config   = Config
               } deriving Generic
 instance Yaml.FromJSON Config
 
-data Table        = Table UTCTime [Header] [Course]       -- ^ Source table
+-- | Source table. Consists of a time stamp, a list of 'Header' objects and a list of 'Course' objects.
+data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
-type Header       = Text                                  -- ^ Column headers in source table
-type Course       = ([Category], Map Header ContentBlock) -- ^ A row in source table
-type Category     = Text                                  -- ^ First column in source table
-type ContentBlock = Text                                  -- ^ td in source table
+
+-- | Extension of 'Data.Text'. Used as Column headers when reading the source table.
+type Header       = Text
+
+-- TODO: Change the name of this type to fit its purpose more
+-- | A row in source table.
+type Course       = ([Category], Map Header ContentBlock)
+
+-- | Extension of 'Data.Text'. First column in source table.
+type Category     = Text
+
+-- | \<td\> HTML tag in source table.
+type ContentBlock = Text
+
+-- | Internationalization database.
 type I18N         = Map Text (Map Lang Text)
+
 
 {- Note [Config and PageConf]
     
-    =Config
+    = Config
     The 'Config' data type is used to read the configuration properties from
-    the 'config.yaml' file. It holds references to all of the different property
+    the /config.yaml/ file. It holds references to all of the different property
     fields and are accessed by their name in the config.yaml file.
     
-    =PageConf
+    = PageConf
     The 'PageConf' data type is used as a data holder for page information
     of the generated web pages. Where they are stored, what their titles are
     etc.
 -}
 
--- * Utility
 
-toUrlPath :: Text -> Text
+-- ***************************************************************************
+-- * Utility functions
+-- ***************************************************************************
+
+
+-- | Appends /.html/ to the end of the argument.
+toUrlPath :: Text   -- ^ Argument: The URL without /.html/
+          -> Text   -- ^ Return:   The URL with /.html/ at the end
 toUrlPath  = (<> ".html")
 
+
+-- | Prepends the argument with the value of the /root/ parameter, and appends /.body/ to the end of the argument.
+--
+-- > root <> arg <> .body
 toFilePath :: FilePath -> Text -> FilePath
 toFilePath root = (root <>) . T.unpack . (<> ".body")
+
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 --
@@ -163,7 +209,11 @@ normalize =
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
     . T.unwords . map (T.unwords . T.words) . T.lines
 
+
+-- ***************************************************************************
 -- * Weboodi stuff
+-- ***************************************************************************
+
 
 getOodiName :: Text -> Maybe Text
 getOodiName = fmap (T.pack
@@ -227,14 +277,20 @@ i18nCourseNameFromOodi lang pid = do
                     return $ Just name
 
 
+-- ***************************************************************************
 -- * Rendering
+-- ***************************************************************************
+
 
 renderTable :: FilePath -> Lang -> PageConf -> Table -> M ()
 renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
   where fp = toFilePath root $ lookup' lang pageUrl
 
+
+-- ***************************************************************************
 -- * Content
+-- ***************************************************************************
 
 -- | How to render the data
 tableBody :: Lang -> PageConf -> Table -> Config -> Html
@@ -433,7 +489,11 @@ updateHiddenDivs = function() {
 }
 |]
 
+
+-- ***************************************************************************
 -- * Courses and categories
+-- ***************************************************************************
+
 
 toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
 toCourse Config{..} cats hs iscur xs =
@@ -494,8 +554,12 @@ getThingMaybe k (_, c) = Map.lookup k c
 getThingLang :: I18N -> Lang -> Text -> Course -> Text
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
+
+-- ***************************************************************************
 -- * Get source
-    
+-- ***************************************************************************
+
+
 parseSettings :: XML.ParseSettings
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
@@ -523,7 +587,11 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 fetch8859 :: String -> IO Text
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
+
+-- ***************************************************************************
 -- * Parse doc
+-- ***************************************************************************
+
 
 parseTable :: XML.Document -> M Table
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
