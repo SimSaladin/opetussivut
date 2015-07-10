@@ -13,9 +13,14 @@
 -- Stability      : experimental
 -- Portability    : non-portable
 -- 
--- This application is used to automatically generate web page bodies listing the available courses at the department of physics at the University of Helsinki. The data is parsed from a confluence Wiki Source Table containing the information needed to either directly generate the list or lookup more information from different web sites.
+-- This application is used to automatically generate web page bodies listing
+-- the available courses at the department of physics at the University of Helsinki.
+-- The data is parsed from a confluence Wiki Source Table containing the information
+-- needed to either directly generate the list or lookup more information from
+-- different web sites.
 --
--- The application takes into consideration internationalization (I18N) for at least Finnish, Swedish and English, more languages might be supported in the future.
+-- The application takes into consideration internationalization (I18N) for at
+-- least Finnish, Swedish and English, more languages might be supported in the future.
 --
 -- The user guide for operating the software can be found at <https://github.com/SimSaladin/opetussivut>
 --
@@ -26,6 +31,7 @@
 module Main where
 
 -- TODO: Remove the unused import?
+-- TODO: Fix the order to follow more standard ones!
 -- import Prelude
 import           Control.Monad
 import           Control.Applicative
@@ -89,12 +95,15 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
 -- * Types
 -- ===========================================================================
 
--- | Short hand for the combination of the other three types.
+-- TODO: Why is it using the three types, ReaderT Config IO
+-- | Short hand for the combination of the three types.
 type M = ReaderT Config IO
 
--- | The 'Lang' type is used as key for looking up the translations from the internationalization (I18N) data base found in the /config.yaml/ file.
+-- | The 'Lang' type is used as key for looking up the translations from the
+-- internationalization (I18N) data base found in the /config.yaml/ file.
+--
+-- It is used with acronyms of the languages: @fi@, @se@, @en@, ...
 type Lang = Text
--- ^ en, se, fi, ...
 
 -- | Properties for generating individual web page bodies.
 data PageConf = PageConf {  -- See Note [Config and PageConf] below
@@ -130,24 +139,28 @@ data Config   = Config {    -- See Note [Config and PageConf] below
               } deriving Generic
 instance Yaml.FromJSON Config
 
--- | Source table. Consists of a time stamp, a list of 'Header' objects and a list of 'Course' objects.
+-- | Source 'Table'. Consists of a time stamp, a list of 'Header' objects and a list of 'Course' objects.
 data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
--- | Extension of 'Data.Text'. Used as Column headers when reading the source table.
+-- | Extension of 'Data.Text'. Used as Column 'Header's when reading the source 'Table'.
 type Header       = Text
 
 -- TODO: Change the name of this type to fit its purpose more
--- | A row in source table.
+-- | A row in source 'Table'.
 type Course       = ([Category], Map Header ContentBlock)
 
--- | Extension of 'Data.Text'. First column in source table.
+-- | Extension of 'Data.Text'. First column in source 'Table'.
 type Category     = Text
 
--- | \<td\> HTML tag in source table.
+-- | \<td\> HTML tag in source 'Table'.
 type ContentBlock = Text
 
 -- | Internationalization database.
+--
+-- Map of a Finnish 'Text' phrase (fragment) to a list of 'Text's mapped to 'Lang'uages.
+-- This way it is easy to translate a specific Finnish phrase to one of the supported
+-- languages.
 type I18N         = Map Text (Map Lang Text)
 
 
@@ -176,17 +189,21 @@ toUrlPath :: Text   -- ^ Argument: The URL without /.html/
 toUrlPath  = (<> ".html")
 
 
--- | Prepends the argument with the value of the /root/ parameter, and appends /.body/ to the end of the argument.
+-- | Prepends the argument with the value of the /root/ parameter,
+-- and appends /.body/ to the end of the argument.
 --
 -- > root <> arg <> .body
+--
+-- The PHP-engine used on physics.helsinki.fi utilizes a own .html file
+-- extension (.body) to show HTML output in the center of the page.
 toFilePath :: FilePath -> Text -> FilePath
 toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 
 -- | A hack, for confluence html is far from the (strictly) spec.
 --
--- weboodi's html is just horrible (imo it's not even html), so we use
--- another regex to parse it (and not with the xml parser).
+-- weboodi's HTML is just horrible (imo it's not even HTML), so we use
+-- another regex to parse it (and not with the XML parser).
 regexes :: [String -> String]
 regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
@@ -195,7 +212,10 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
 
 -- | Fetch a translation from the I18N database, /db/, found in /config.yaml/.
 --
--- If the text that is to be translated can't be found in the given database. It'll fall back on the given text. If the selected language in this case is not Finnish it will also warn the user that no translation for the selected text can be found.
+-- If the text that is to be translated can't be found in the given database.
+-- It'll fall back on the given text. If the selected language in this case is
+-- not Finnish it will also warn the user that no translation for the selected
+-- text can be found.
 toLang :: I18N  -- ^ Argument: The database to fetch from
        -> Lang  -- ^ Argument: The language to fetch translation for
        -> Text  -- ^ Argument: The text to translate
@@ -206,7 +226,8 @@ toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key 
                  | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
 
 
--- | Lookup a translation from any given map of text, containing 'y' types mapped to 'Lang' types. It only returns 'Just' values of the result.
+-- | Lookup a translation from any given map, containing 'y' types
+-- mapped to 'Lang' types. It only returns 'Just' values of the result.
 lookup' :: Lang         -- ^ Argument: The language to look for
         -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from
         -> y            -- ^ Return:   The value of type 'y' found in the map
@@ -228,37 +249,64 @@ normalize =
 -- ===========================================================================
 
 
-getOodiName :: Text -> Maybe Text
-getOodiName = fmap (T.pack
-                   . sub "&aring;" "å"
-                   . sub "&auml;" "ä"
-                   . sub "&Aring;" "Å"
-                   . sub "&Auml;" "Ä"
-                   . sub "&ouml;" "ö"
-                   . sub "&Ouml;" "Å"
-                   . sub "&#x3a;" ":"
-                   . sub "&#x27;" "'"
-                   . sub "&#x28;" "("
-                   . sub "&#x29;" ")"
-                   . sub "&#x3b;" ";"
-                   . head)
-            . matchRegex (mkRegexWithOpts s True False) . T.unpack
-    where s = "tauluotsikko\"?>[0-9 ]*(.*),[^,]*<"
-          sub a b i = subRegex (mkRegexWithOpts a False True) i b
+-- | Fetch the course name from the WebOodi url.
+getOodiName :: Text         -- ^ Argument: 
+            -> Maybe Text   -- ^ Return:   
+getOodiName =
+    fmap (T.pack
+          . sub "&aring;" "å"
+          . sub "&Aring;" "Å"
+          . sub "&auml;" "ä"
+          . sub "&Auml;" "Ä"
+          . sub "&ouml;" "ö"
+          . sub "&Ouml;" "Ö"
+          . sub "&#x3a;" ":"
+          . sub "&#x27;" "'"
+          . sub "&#x28;" "("
+          . sub "&#x29;" ")"
+          . sub "&#x3b;" ";"
+          . head) . matchRegex (mkRegexWithOpts s True False) . T.unpack
+  where s         = "tauluotsikko\"?>[0-9 ]*(.*),[^,]*<"
+        sub a b i = subRegex (mkRegexWithOpts a False True) i b
 
-weboodiLang :: Lang -> Text
-weboodiLang "fi" = "1"
-weboodiLang "se" = "2"
-weboodiLang "en" = "6"
-weboodiLang _    = ""
 
-weboodiLink :: Text -> Lang -> Text -> Text
+-- | Helper method to select the correct language when using WebOodi.
+-- The language is changed by switching a number in the URL:
+--
+--      * 1 : fi (Finnish version)
+--
+--      * 2 : se (Swedish version)
+--
+--      * 6 : en (English version)
+--
+-- If another language than the provided ones is used, the function
+-- returns an empty string instead of a number.
+weboodiLang :: Lang     -- ^ The 'Lang' to use on WebOodi
+            -> Text     -- ^ Return:  The number to switch to in the WebOodi URL
+weboodiLang lang
+            | "fi" <- lang = "1"
+            | "se" <- lang = "2"
+            | "en" <- lang = "6"
+            | otherwise    = ""
+
+
+-- TODO: Change the example to use the real base URL found in the config.yaml file
+-- | Creates a hyperlink to use for accessing the selected language version of WebOodi.
+--
+-- The return value has the form of: /[base URL][1/2/6]"&Tunniste="[page ID]/.
+weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi
+            -> Lang     -- ^ Argument: Language to use on WebOodi
+            -> Text     -- ^ Argument: WebOodi page ID
+            -> Text     -- ^ Return:   The concatenated URL
 weboodiLink url lang pid = url <> weboodiLang lang <> "&Tunniste=" <> pid
 
+
+-- TODO: What does it do?
 oodiVar :: MVar (Map (Lang, Text) Text)
 oodiVar = unsafePerformIO newEmptyMVar
 {-# NOINLINE oodiVar #-}
-     
+
+
 readOodiNames :: M (Map (Lang, Text) Text)
 readOodiNames = do
     Config{..} <- ask
@@ -266,6 +314,7 @@ readOodiNames = do
     if exists
         then liftIO $ read <$> readFile oodiNameFile
         else return Map.empty
+
 
 i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
 i18nCourseNameFromOodi lang pid = do
@@ -295,7 +344,12 @@ i18nCourseNameFromOodi lang pid = do
 -- ===========================================================================
 
 
-renderTable :: FilePath -> Lang -> PageConf -> Table -> M ()
+-- | Create the final HTML version of the web page from the cached one.
+renderTable :: FilePath     -- ^ Argument: The root to where the HTML file should be saved.
+            -> Lang         -- ^ Argument: The currently used language.
+            -> PageConf     -- ^ Argument: More specific information of the current web page being created.
+            -> Table        -- ^ Argument: The source table to use when creating the web page
+            -> M ()         -- ^ Return:   ReaderT Config IO, from the generated HTML file.
 renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
   where fp = toFilePath root $ lookup' lang pageUrl
@@ -305,8 +359,13 @@ renderTable root lang pc@PageConf{..} table =
 -- * Content
 -- ===========================================================================
 
--- | How to render the data
-tableBody :: Lang -> PageConf -> Table -> Config -> Html
+-- | How to render the data of the selected table into HTML using WebOodi
+-- to lookup course names in different languages.
+tableBody :: Lang           -- ^ Argument: The currently used language.
+          -> PageConf       -- ^ Argument: More specific information of the current web page being created.
+          -> Table          -- ^ Argument: The source table to use when creating the web page.
+          -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
+          -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ stuff) cnf@Config{..} =
         let ii                       = toLang i18n lang
             translateCourseName code = unsafePerformIO $
@@ -446,7 +505,8 @@ $maybe x <- catAt cnf n (head xs)
   #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
 |]
 
---
+
+-- | Creating the javascript functions of the buttons in the HTML files.
 jsLogic :: JavascriptUrl url
 jsLogic = [julius|
 
@@ -508,7 +568,17 @@ updateHiddenDivs = function() {
 -- ===========================================================================
 
 
-toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
+-- | Creates a row for the current 'Table'. The output will differ depending 
+-- on the content in the 'Config' data and the different arguments.
+--
+-- This function will return the finished row, containing the separating
+-- categories and the correct course information from the source table.
+toCourse :: Config          -- ^ Argument: The 'Config' to lookup page configuration data from.
+         -> [Category]      -- ^ Argument: A list of 'Category's to pass on to the finished row.
+         -> [Header]        -- ^ Argument: A list of 'Header's to select correct 'Text' from the given list.
+         -> Bool            -- ^ Argument: If 'True' this will make the course available this year.
+         -> [Text]          -- ^ Argument: Used to fill the columns of the row with values from the source 'Table'.
+         -> Course          -- ^ Return:   The finished row.
 toCourse Config{..} cats hs iscur xs =
     (cats, Map.adjust doLang colLang $
            Map.adjust doRepeats colRepeats $
@@ -526,45 +596,86 @@ toCourse Config{..} cats hs iscur xs =
             | "kesä"  `T.isInfixOf` x                  = Just "kesä"
             | otherwise                                = Nothing
 
-doRepeats :: Text -> Text
+
+-- | 
+doRepeats :: Text   -- ^ Argument: 
+          -> Text   -- ^ Return:   
 doRepeats x | T.any isLetter x = "-"
             | otherwise        = x
 
-doLang :: Text -> Text
+-- | 
+doLang :: Text      -- ^ Argument:
+       -> Text      -- ^ Return:   
 doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "en"
        . T.replace "ruotsi" "se"
        . T.unwords . T.words
        . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
+
 -- | Accumulate a category to list of categories based on what categories
 -- cannot overlap
-accumCategory :: Config -> Category -> [Category] -> [Category]
+accumCategory :: Config         -- ^ Argument: 
+              -> Category       -- ^ Argument: 
+              -> [Category]     -- ^ Argument: 
+              -> [Category]     -- ^ Return:   
 accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
     Nothing -> error $ "Unknown category: " ++ show c
     Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
     where f i = concat $ L.drop i categories
 
-toCategory :: Config -> Text -> Maybe Category
+
+-- | 
+toCategory :: Config            -- ^ Argument: 
+           -> Text              -- ^ Argument: 
+           -> Maybe Category    -- ^ Return:   
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
     guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
     return $ normalize t
 
-catAt :: Config -> Int -> Course -> Maybe Text
+
+-- | 
+catAt :: Config         -- ^ Argument: 
+      -> Int            -- ^ Argument: 
+      -> Course         -- ^ Argument: 
+      -> Maybe Text     -- ^ Return:   
 catAt Config{..} n (cats, _) = case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
                                    x:_ -> Just x
                                    _   -> Nothing
 
-catGroup :: Config -> Int -> Course -> Course -> Bool
+
+-- | 
+catGroup :: Config      -- ^ Argument: 
+         -> Int         -- ^ Argument: 
+         -> Course      -- ^ Argument: 
+         -> Course      -- ^ Argument: 
+         -> Bool        -- ^ Return:   
 catGroup cnf n = (==) `on` catAt cnf n
 
-getThing :: Text -> Course -> Text
+
+-- TODO: Fix the name of this function
+-- | 
+getThing :: Text        -- ^ Argument: 
+         -> Course      -- ^ Argument: 
+         -> Text        -- ^ Return: 
 getThing k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "Key not found: " <> k) $ getThingMaybe k c
 
-getThingMaybe :: Text -> Course -> Maybe Text
+
+-- TODO: Fix the name of this function
+-- | 
+getThingMaybe :: Text           -- ^ Argument: 
+              -> Course         -- ^ Argument: 
+              -> Maybe Text     -- ^ Return: 
 getThingMaybe k (_, c) = Map.lookup k c
 
-getThingLang :: I18N -> Lang -> Text -> Course -> Text
+
+-- TODO: Fix the namne of this function
+-- | 
+getThingLang :: I18N    -- ^ Argument: 
+             -> Lang    -- ^ Argument: 
+             -> Text    -- ^ Argument: 
+             -> Course  -- ^ Argument: 
+             -> Text    -- ^ Return: 
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
 
@@ -573,11 +684,14 @@ getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang 
 -- ===========================================================================
 
 
+-- | 
 parseSettings :: XML.ParseSettings
 parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
+
 -- | Fetch a confluence doc by id.
-getData :: String -> M (Maybe XML.Document)
+getData :: String                   -- ^ Argument: 
+        -> M (Maybe XML.Document)   -- ^ Return: 
 getData pid = do
     Config{..} <- ask
     xs         <- lift getArgs
@@ -594,10 +708,16 @@ getData pid = do
 
     return $ cleanAndParse <$> str
 
-cleanAndParse :: LT.Text -> XML.Document
+
+-- | 
+cleanAndParse :: LT.Text        -- ^ Argument: 
+              -> XML.Document   -- ^ Return: 
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
 
-fetch8859 :: String -> IO Text
+
+-- |
+fetch8859 :: String     -- ^ Argument: 
+          -> IO Text    -- ^ Return: 
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
 
@@ -606,17 +726,30 @@ fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> s
 -- ===========================================================================
 
 
-parseTable :: XML.Document -> M Table
+-- | 
+parseTable :: XML.Document  -- ^ Argument: 
+           -> M Table       -- ^ Return: 
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
 
-findTable :: Cursor -> Config -> [Maybe Table]
+
+-- | 
+findTable :: Cursor         -- ^ Argument: 
+          -> Config         -- ^ Argument: 
+          -> [Maybe Table]  -- ^ Return: 
 findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
 
-getHeader :: Cursor -> Maybe Header
+
+-- | 
+getHeader :: Cursor         -- ^ Argument: 
+          -> Maybe Header   -- ^ Return: 
 getHeader c = return x
   where x = T.toLower . normalize $ T.unwords (c $// content)
 
-processTable :: Config -> Cursor -> Maybe Table
+
+-- | 
+processTable :: Config      -- ^ Argument: 
+             -> Cursor      -- ^ Argument: 
+             -> Maybe Table -- ^ Return: 
 processTable cnf c = case cells of
     _ : header : xs ->
         let headers       = tail (mapMaybe getHeader header)
@@ -625,6 +758,7 @@ processTable cnf c = case cells of
     _               -> Nothing
   where
     cells = map ($/ anyElement) (c $// element "tr")
+
 
 -- | A row is either a category or course. The @[Category]@ is used as an
 -- accumulator.
@@ -636,3 +770,6 @@ getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head 
                 Nothing | null vs               -> (cats, Nothing)
                         | T.null (normalize mc) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
                         | otherwise             -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
+
+
+
