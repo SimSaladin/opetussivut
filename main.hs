@@ -193,16 +193,30 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
 
-toLang :: I18N -> Lang -> Text -> Text
+-- | Fetch a translation from the I18N database, /db/, found in /config.yaml/.
+--
+-- If the text that is to be translated can't be found in the given database. It'll fall back on the given text. If the selected language in this case is not Finnish it will also warn the user that no translation for the selected text can be found.
+toLang :: I18N  -- ^ Argument: The database to fetch from
+       -> Lang  -- ^ Argument: The language to fetch translation for
+       -> Text  -- ^ Argument: The text to translate
+       -> Text  -- ^ Return:   The translated text or the text to translate
 toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
   where fallback | "fi" <- lang = key
                  | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
 
-lookup' :: Lang -> Map Lang y -> y
+
+-- | Lookup a translation from any given map of text, containing 'y' types mapped to 'Lang' types. It only returns 'Just' values of the result.
+lookup' :: Lang         -- ^ Argument: The language to look for
+        -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from
+        -> y            -- ^ Return:   The value of type 'y' found in the map
 lookup' i = fromJust . Map.lookup i
 
-normalize :: Text -> Text
+
+-- TODO: Check what this actually does.
+-- | 
+normalize :: Text   -- ^ Argument: 
+          -> Text   -- ^ Result:   
 normalize =
     T.dropAround (`elem` " ,-!")
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
@@ -599,13 +613,13 @@ findTable :: Cursor -> Config -> [Maybe Table]
 findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
 
 getHeader :: Cursor -> Maybe Header
-getHeader c = return x <* guard (not $ T.null x)
+getHeader c = return x
   where x = T.toLower . normalize $ T.unwords (c $// content)
 
 processTable :: Config -> Cursor -> Maybe Table
 processTable cnf c = case cells of
     _ : header : xs ->
-        let headers       = mapMaybe getHeader header
+        let headers       = tail (mapMaybe getHeader header)
             (_, mcourses) = L.mapAccumL (getRow cnf headers) [] xs
         in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
     _               -> Nothing
