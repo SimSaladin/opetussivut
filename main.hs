@@ -68,11 +68,9 @@ categoryLevelTaso :: Int
 categoryLevelTaso = 1
 
 
-{-| The entry point of the application.
-
-    It reads the /config.yaml/ file into memory before doing anything else.
-    
--}
+-- | The entry point of the application.
+--
+-- It reads the /config.yaml/ file into memory before doing anything else.
 main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
     where
@@ -87,9 +85,9 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
                   forM_ languages $ \lang -> renderTable rootDir lang pc table
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Types
--- ***************************************************************************
+-- ===========================================================================
 
 -- | Short hand for the combination of the other three types.
 type M = ReaderT Config IO
@@ -167,9 +165,9 @@ type I18N         = Map Text (Map Lang Text)
 -}
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Utility functions
--- ***************************************************************************
+-- ===========================================================================
 
 
 -- | Appends /.html/ to the end of the argument.
@@ -194,6 +192,7 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
+
 toLang :: I18N -> Lang -> Text -> Text
 toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
@@ -210,9 +209,9 @@ normalize =
     . T.unwords . map (T.unwords . T.words) . T.lines
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Weboodi stuff
--- ***************************************************************************
+-- ===========================================================================
 
 
 getOodiName :: Text -> Maybe Text
@@ -277,9 +276,9 @@ i18nCourseNameFromOodi lang pid = do
                     return $ Just name
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Rendering
--- ***************************************************************************
+-- ===========================================================================
 
 
 renderTable :: FilePath -> Lang -> PageConf -> Table -> M ()
@@ -288,9 +287,9 @@ renderTable root lang pc@PageConf{..} table =
   where fp = toFilePath root $ lookup' lang pageUrl
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Content
--- ***************************************************************************
+-- ===========================================================================
 
 -- | How to render the data
 tableBody :: Lang -> PageConf -> Table -> Config -> Html
@@ -490,9 +489,9 @@ updateHiddenDivs = function() {
 |]
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Courses and categories
--- ***************************************************************************
+-- ===========================================================================
 
 
 toCourse :: Config -> [Category] -> [Header] -> Bool -> [Text] -> Course
@@ -555,9 +554,9 @@ getThingLang :: I18N -> Lang -> Text -> Course -> Text
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Get source
--- ***************************************************************************
+-- ===========================================================================
 
 
 parseSettings :: XML.ParseSettings
@@ -588,9 +587,9 @@ fetch8859 :: String -> IO Text
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
 
--- ***************************************************************************
+-- ===========================================================================
 -- * Parse doc
--- ***************************************************************************
+-- ===========================================================================
 
 
 parseTable :: XML.Document -> M Table
