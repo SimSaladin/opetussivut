@@ -85,7 +85,7 @@ webapp: build
 # TEST THE APPLICATION - TARGETS
 #=========================================================
 .PHONY: run-fetch
-run-fetch: build
+run-fetch: webapp
 	@ tput setaf 2	# Green text
 	@ echo "Running with 'fetch' argument"
 	@ #---------------------------------------------------
@@ -96,7 +96,7 @@ run-fetch: build
 
 
 .PHONY: run-cache
-run-cache: build
+run-cache: webapp
 	@ tput setaf 2	# Green text
 	@ echo "Running with 'cache' argument"
 	@ #---------------------------------------------------
