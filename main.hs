@@ -78,17 +78,25 @@ categoryLevelTaso = 1
 --
 -- It reads the /config.yaml/ file into memory before doing anything else.
 main :: IO ()
-main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
+main = trace ("============================================================\n" ++
+              " Running Application\n" ++
+              "============================================================\n" ++
+              " * Decoding `config.yaml'")
+    Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
   where
     go = do
         Config{..} <- ask
         forM_ pages $ \pc@PageConf{..} -> do
-            dt <- getData pageId
-            case dt of
-                Nothing -> liftIO $ putStrLn "Warning: failed to fetch doc, not updating listing"
-                Just dt' -> do
-                    table <- parseTable dt'
-                    forM_ languages $ \lang -> renderTable rootDir lang pc table
+            pageData <- 
+                trace (" * Reading data from Wiki page ID: " ++ pageId)
+                getData pageId
+            case pageData of
+                Nothing -> liftIO $ putStrLn "!!! Warning: failed to fetch doc, not updating the listings..."
+                Just pageData' -> do
+                    table <- parseTable pageData'
+                    forM_ languages $ \lang -> 
+                        trace (" *     Language: " ++ show lang)
+                        renderTable rootDir lang pc table
 
 
 -- ===========================================================================
@@ -234,18 +242,18 @@ toLang :: I18N  -- ^ Argument: The 'I18N' database to fetch translations from.
        -> Lang  -- ^ Argument: The 'Lang'uage to fetch translation for.
        -> Text  -- ^ Argument: The 'Text' to translate.
        -> Text  -- ^ Return:   The translated 'Text' or the 'Text' to translate if no translation was found.
-toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
+toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
   where fallback | "fi" <- lang = key
-                 | otherwise    = trace ("Warn: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
+                 | otherwise    = trace ("!!! Warning: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
 
 
 -- | Lookup a translation from any given map, containing 'y' types
 -- mapped to 'Lang' types. It only returns 'Just' values of the result.
-lookup' :: Lang         -- ^ Argument: The 'Lang'uage to look for.
+lookupLang :: Lang         -- ^ Argument: The 'Lang'uage to look for.
         -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from.
         -> y            -- ^ Return:   The value of type 'y' found in the map.
-lookup' i = fromJust . Map.lookup i
+lookupLang i = fromJust . Map.lookup i
 
 
 -- TODO: Check what this actually does.
@@ -386,7 +394,7 @@ renderTable :: FilePath     -- ^ Argument: The root to where the HTML file shoul
             -> M ()         -- ^ Return:   ReaderT Config IO, from the generated HTML file.
 renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
-  where fp = toFilePath root $ lookup' lang pageUrl
+  where fp = toFilePath root $ lookupLang lang pageUrl
 
 
 -- ===========================================================================
@@ -405,15 +413,6 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
     let ii                       = toLang i18n lang
         translateCourseName code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
-
-        -- course category div -------------------------------------------------
-        withCat n xs f =
-            [shamlet|
-                $forall ys <- L.groupBy (catGroup cnf n) xs
-                    <div.courses>
-                        #{ppCat n ys}
-                        #{f ys}
-            |]
 
         -- course table --------------------------------------------------------
         go n xs
@@ -478,12 +477,21 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                             <b>#{ii x}
             |]
 
+        -- course category div -------------------------------------------------
+        withCat n xs f =
+            [shamlet|
+                $forall ys <- L.groupBy (catGroup cnf n) xs
+                    <div.courses>
+                        #{ppCat n ys}
+                        #{f ys}
+            |]
+
         -- put everything together --------------------------------------------
     in [shamlet|
-        \<!-- title: #{lookup' lang $ pageTitle page} -->
-        \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" $ pageUrl page} -->
-        \<!-- se (Svensk version): #{toUrlPath $ lookup' "se" $ pageUrl page} -->
-        \<!-- en (English version): #{toUrlPath $ lookup' "en" $ pageUrl page} -->
+        \<!-- title: #{lookupLang lang $ pageTitle page} -->
+        \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookupLang "fi" $ pageUrl page} -->
+        \<!-- se (Svensk version): #{toUrlPath $ lookupLang "se" $ pageUrl page} -->
+        \<!-- en (English version): #{toUrlPath $ lookupLang "en" $ pageUrl page} -->
         \
 
         \<!-- !!! IMPORTANT !!! -->
@@ -603,8 +611,147 @@ jsLogic = [julius|
 
 
 -- ===========================================================================
--- * Courses and categories
+-- * Get source
 -- ===========================================================================
+
+
+-- | The main entry of the application. This function handles the command line
+-- arguments for caching and fetching the wiki tables.
+--
+-- Fetch a confluence doc (wiki page) by id. This function reads the wiki
+-- page with the given page ID, and parses it as an XML-document. The result
+-- is cleaned with the 'regexes' function.
+getData :: String                   -- ^ Argument: The page ID.
+        -> M (Maybe XML.Document)   -- ^ Return:   The cleaned XML-document, if found any.
+getData pageId = do
+    Config{..} <- ask
+    xs         <- lift getArgs
+    let file   = cacheDir <> "/" <> pageId <> ".html"
+
+    str <- lift $ case xs of
+        "cache" : _ -> Just <$> LT.readFile file
+        "fetch" : _ -> do 
+                        r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
+                        if "<title>Log In" `LT.isInfixOf` r
+                            then 
+                                trace (" * Private Wiki Table - Can't read...")
+                                return Nothing
+                            else
+                                trace (" * Writing to file: " ++ file)
+                                LT.writeFile file r >> return (Just r)
+        _           -> putStrLn " * Usage: opetussivut <fetch|cache>" >> exitFailure
+
+    return $ cleanAndParse <$> str
+
+
+-- | This function takes a whole wiki table in 'Text' form and removes some standard
+-- HTML tags from the text (see 'regexes' for more information). It then parses an XML
+-- document from the HTML bodied 'Text' stream.
+--
+-- Uses the 'XML.decodeHtmlEntities' setting to decode the 'Text' into XML.
+cleanAndParse :: LT.Text        -- ^ Argument: The raw 'Text' version of the cached wiki page.
+              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'Text'.
+cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
+  where
+    parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
+
+
+-- ===========================================================================
+-- * Parse doc
+-- ===========================================================================
+
+
+-- | 
+parseTable :: XML.Document  -- ^ Argument: A 'XML.Document' prepared with the 'cleanAndParse' function.
+           -> M Table       -- ^ Return:   The parsed 'Table'.
+parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
+
+
+-- | Looks for all tables in the generated XML document, with XML-attribute /class/ @confluenceTable@,
+-- maps the function 'processTable' to the result list, and finally returns a list containing the 
+-- discovered 'Table's.
+findTable :: Cursor         -- ^ Argument: XML document cursor.
+          -> Config         -- ^ Argument: Pointer to the /config.yaml/ data.
+          -> [Maybe Table]  -- ^ Return:   List of 'Maybe' 'Table's 
+findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
+
+
+-- | This function takes a pointer to the 'Config' data and an XML 'Cursor' (pointing to the class
+-- attributes with the value @confluenceTable@). It picks out all the XML-elements beginning with
+-- the tag @tr@ from the @confluenceTable@ class 'Cursor' and maps all child elements of the @tr@
+-- element to it.
+--
+-- The 'cells' variable contains all the rows of the table. The first row contains some higher-level
+-- headers (eg. "Vastaava opettaja"), hence this row is ignored. The second row contains the main 'Header's
+-- of the different columns, and the rest of the rows are either 'Course' information or 'Category's
+-- separating the different 'Course' informations.
+--
+-- The first column in the main 'Header' row is empty (this is the column containing the category headers).
+processTable :: Config      -- ^ Argument: Pointer to the /config.yaml/ file.
+             -> Cursor      -- ^ Argument: XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
+             -> Maybe Table -- ^ Return: The processed 'Maybe' 'Table'.
+processTable cnf c = case cells of
+    _ : headersRaw : xs ->
+        let headers       = tail (mapMaybe getHeader headersRaw)
+            (_, mcourses) = L.mapAccumL (getRow cnf headers) [] xs
+        in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
+    _               -> Nothing
+  where
+    cells = map ($/ anyElement) (c $// element "tr")
+
+
+-- TODO: Is it possible to remove the 'Maybe' type from this?
+-- | Create a 'Maybe' 'Header' type corresponding to the value of the raw XML-cell containging information
+-- about the header.
+getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the header.
+          -> Maybe Header   -- ^ Return:   A 'Maybe' 'Header' type corresponding to the 'Cursor' value.
+getHeader c = return . T.toLower . normalize $ T.unwords (c $// content)
+
+
+-- | A row is either a category or a course. The @['Category']@ is used as an
+-- accumulator.
+getRow :: Config                        -- ^ Argument: 
+       -> [Header]                      -- ^ Argument: 
+       -> [Category]                    -- ^ Argument: 
+       -> [Cursor]                      -- ^ Argument: 
+       -> ([Category], Maybe Course)    -- ^ Return:   
+getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
+  where
+    go []        _       = (cats, Nothing)
+    go (mc : vs) classes = case toCategory cnf mc of
+            Just cat                        -> (accumCategory cnf cat cats, Nothing)
+            Nothing | null vs               -> (cats, Nothing)
+                    | T.null (normalize mc) -> (cats, Just $ toCourse cnf cats headers (classCur `T.isInfixOf` classes) vs)
+                    | otherwise             -> (cats, Just $ toCourse cnf cats headers (classCur `T.isInfixOf` classes) vs)
+
+
+-- ===========================================================================
+-- ** Courses and categories
+-- ===========================================================================
+
+
+-- TODO: Understand what this does
+-- | 
+toCategory :: Config            -- ^ Argument: 
+           -> Text              -- ^ Argument: 
+           -> Maybe Category    -- ^ Return:   
+toCategory Config{..} t = do
+    guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
+    guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
+    return $ normalize t
+
+
+-- TODO: Understand what this code exactly does.
+-- | Accumulate a 'Category' to a list of 'Category's based on what categories
+-- cannot overlap.
+accumCategory :: Config         -- ^ Argument:
+              -> Category       -- ^ Argument: 
+              -> [Category]     -- ^ Argument: 
+              -> [Category]     -- ^ Return:   
+accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
+    Nothing -> error $ "Unknown category: " ++ show c
+    Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
+  where f i = concat $ L.drop i categories
 
 
 -- TODO: Add an alternative for 'kesä, kenttä'
@@ -637,15 +784,6 @@ toCourse Config{..} cats hs iscur xs =
             | otherwise                                = Nothing
 
 
--- | Checks the column @/toistuu/@ from the source 'Table'. If there's anything but
--- numericals or non-alpha signs, it'll return a 'string' consisting of the '-' sign.
--- Else it returns the value of the cell.
-doRepeats :: Text   -- ^ Argument: The 'Text' in the cell of the column.
-          -> Text   -- ^ Return:   The value of 'Text' argument if there isn't any alpha characters in the cell.
-doRepeats x | T.any isLetter x = "-"
-            | otherwise        = x
-
-
 -- | Change the format of the @colLang@ column 'Header' in the source 'Table' to be
 -- in correct.
 --
@@ -660,28 +798,22 @@ doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "e
        . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
 
--- TODO: Understand what this code exactly does.
--- | Accumulate a 'Category' to a list of 'Category's based on what categories
--- cannot overlap.
-accumCategory :: Config         -- ^ Argument:
-              -> Category       -- ^ Argument: 
-              -> [Category]     -- ^ Argument: 
-              -> [Category]     -- ^ Return:   
-accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
-    Nothing -> error $ "Unknown category: " ++ show c
-    Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
-  where f i = concat $ L.drop i categories
+-- | Checks the column @/toistuu/@ from the source 'Table'. If there's anything but
+-- numericals or non-alpha signs, it'll return a 'string' consisting of the '-' sign.
+-- Else it returns the value of the cell.
+doRepeats :: Text   -- ^ Argument: The 'Text' in the cell of the column.
+          -> Text   -- ^ Return:   The value of 'Text' argument if there isn't any alpha characters in the cell.
+doRepeats x | T.any isLetter x = "-"
+            | otherwise        = x
 
 
--- TODO: Understand what this does
 -- | 
-toCategory :: Config            -- ^ Argument: 
-           -> Text              -- ^ Argument: 
-           -> Maybe Category    -- ^ Return:   
-toCategory Config{..} t = do
-    guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
-    guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
-    return $ normalize t
+catGroup :: Config      -- ^ Argument: 
+         -> Int         -- ^ Argument: 
+         -> Course      -- ^ Argument: 
+         -> Course      -- ^ Argument: 
+         -> Bool        -- ^ Return:   
+catGroup cnf n = (==) `on` catAt cnf n
 
 
 -- | 
@@ -693,15 +825,6 @@ catAt Config{..} n (cats, _) =
     case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
         x:_ -> Just x
         _   -> Nothing
-
-
--- | 
-catGroup :: Config      -- ^ Argument: 
-         -> Int         -- ^ Argument: 
-         -> Course      -- ^ Argument: 
-         -> Course      -- ^ Argument: 
-         -> Bool        -- ^ Return:   
-catGroup cnf n = (==) `on` catAt cnf n
 
 
 -- TODO: Fix the name of this function
@@ -720,6 +843,7 @@ getThingMaybe :: Text           -- ^ Argument:
 getThingMaybe k (_, c) = Map.lookup k c
 
 
+{- This method is not used in the application
 -- TODO: Fix the namne of this function
 -- | 
 getThingLang :: I18N    -- ^ Argument: 
@@ -728,108 +852,7 @@ getThingLang :: I18N    -- ^ Argument:
              -> Course  -- ^ Argument: 
              -> Text    -- ^ Return: 
 getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
-
-
--- ===========================================================================
--- * Get source
--- ===========================================================================
-
-
--- | The main entry of the application. This function handles the command line
--- arguments for caching and fetching the wiki tables.
---
--- Fetch a confluence doc (wiki page) by id. This function reads the wiki
--- page with the given page ID, and parses it as an XML-document. The result
--- is cleaned with the 'regexes' function.
-getData :: String                   -- ^ Argument: The page ID.
-        -> M (Maybe XML.Document)   -- ^ Return:   The cleaned XML-document, if found any.
-getData pageId = do
-    Config{..} <- ask
-    xs         <- lift getArgs
-    let file   = cacheDir <> "/" <> pageId <> ".html"
-
-    str <- lift $ case xs of
-        "cache" : _ -> Just <$> LT.readFile file
-        "fetch" : _ -> do 
-                        liftIO . putStrLn $ "Fetching doc id " <> show pageId
-                        r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
-                        if "<title>Log In" `LT.isInfixOf` r
-                            then 
-                                trace ("Private Wiki Table - Can't read...")
-                                return Nothing
-                            else
-                                trace ("Writing to file: " ++ file)
-                                LT.writeFile file r >> return (Just r)
-        _           -> putStrLn "Usage: opetussivut <fetch|cache>" >> exitFailure
-
-    return $ cleanAndParse <$> str
-
-
--- | This function takes a whole wiki table in 'Text' form and removes some standard
--- HTML tags from the text (see 'regexes' for more information). It then parses an XML
--- document from the HTML bodied 'Text' stream.
---
--- Uses the 'XML.decodeHtmlEntities' setting to decode the 'Text' into XML.
-cleanAndParse :: LT.Text        -- ^ Argument: The raw 'Text' version of the cached wiki page.
-              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'Text'.
-cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
-  where
-    parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-
-
--- ===========================================================================
--- * Parse doc
--- ===========================================================================
-
-
--- | 
-parseTable :: XML.Document  -- ^ Argument: 
-           -> M Table       -- ^ Return: 
-parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
-
-
--- | 
-findTable :: Cursor         -- ^ Argument: 
-          -> Config         -- ^ Argument: 
-          -> [Maybe Table]  -- ^ Return: 
-findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
-
-
--- | 
-getHeader :: Cursor         -- ^ Argument: 
-          -> Maybe Header   -- ^ Return: 
-getHeader c = return x
-  where x = T.toLower . normalize $ T.unwords (c $// content)
-
-
--- | 
-processTable :: Config      -- ^ Argument: 
-             -> Cursor      -- ^ Argument: 
-             -> Maybe Table -- ^ Return: 
-processTable cnf c = case cells of
-    _ : header : xs ->
-        let headers       = tail (mapMaybe getHeader header)
-            (_, mcourses) = L.mapAccumL (getRow cnf headers) [] xs
-        in Just $ Table (unsafePerformIO getCurrentTime) headers (catMaybes mcourses)
-    _               -> Nothing
-  where
-    cells = map ($/ anyElement) (c $// element "tr")
-
-
--- | A row is either a category or a course. The @['Category']@ is used as an
--- accumulator.
-getRow :: Config                        -- ^ Argument: 
-       -> [Header]                      -- ^ Argument: 
-       -> [Category]                    -- ^ Argument: 
-       -> [Cursor]                      -- ^ Argument: 
-       -> ([Category], Maybe Course)    -- ^ Return:   
-getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
-    where go []        _       = (cats, Nothing)
-          go (mc : vs) classes = case toCategory cnf mc of
-                Just cat                        -> (accumCategory cnf cat cats, Nothing)
-                Nothing | null vs               -> (cats, Nothing)
-                        | T.null (normalize mc) -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
-                        | otherwise             -> (cats, Just $ toCourse cnf cats hs (classCur `T.isInfixOf` classes) vs)
+-}
 
 
 
