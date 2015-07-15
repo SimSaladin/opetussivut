@@ -496,15 +496,15 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
 
         \<!-- !!! IMPORTANT !!! -->
         \<!-- THIS PAGE IS GENERATED AUTOMATICALLY - DO NOT EDIT DIRECTLY! -->
-        \<!-- See https://github.com/SimSaladin/opetussivut instead -->
+        \<!-- See https://github.com/SimSaladin/opetussivut for information on how to edit instead -->
         \
 
         <p>
             $with pg <- head pages
-                <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+                <a href="#{toUrlPath $ lookupLang lang $ pageUrl pg}">#{lookupLang lang $ pageTitle pg}
             $forall pg <- tail pages
                 \ |
-                <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+                <a href="#{toUrlPath $ lookupLang lang $ pageUrl pg}">#{lookupLang lang $ pageTitle pg}
         \
         <p>
             #{markdown def $ LT.fromStrict $ i18nTranslationOf "aputeksti"}
