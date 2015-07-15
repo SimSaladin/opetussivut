@@ -172,7 +172,7 @@ type Course       = ([Category], Map Header ContentBlock)
 type Category     = Text
 
 
--- | \<td\> HTML tag in source 'Table'.
+-- | @\<td\>@ HTML tag in source 'Table'.
 type ContentBlock = Text
 
 
