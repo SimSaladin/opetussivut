@@ -208,7 +208,9 @@ toUrlPath  = (<> ".html")
 --
 -- The PHP-engine used on physics.helsinki.fi utilizes a own .html file
 -- extension (.body) to show HTML output in the center of the page.
-toFilePath :: FilePath -> Text -> FilePath
+toFilePath :: FilePath  -- ^ Argument: The root directory.
+           -> Text      -- ^ Argument: The file name.
+           -> FilePath  -- ^ Return:   @root/filename.body@
 toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 
@@ -247,6 +249,7 @@ lookup' i = fromJust . Map.lookup i
 
 
 -- TODO: Check what this actually does.
+-- TODO: Why is the T.words and T.unwords called directly after each other?
 -- | 
 normalize :: Text   -- ^ Argument: The 'Text' to normalize.
           -> Text   -- ^ Result:   The normalized 'Text'.
@@ -343,8 +346,8 @@ i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to loo
 i18nCourseNameFromOodi lang pageId = do
     Config{..} <- ask
 
-    ov <- liftIO $ tryTakeMVar oodiVar
-    oodiNames <- case ov of
+    ov         <- liftIO $ tryTakeMVar oodiVar
+    oodiNames  <- case ov of
         Just x  -> return x
         Nothing -> readOodiNames
     liftIO $ putMVar oodiVar oodiNames
@@ -391,199 +394,203 @@ tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ stuff) cnf@Config{..} =
-        let ii                       = toLang i18n lang
-            translateCourseName code = unsafePerformIO $
-                runReaderT (i18nCourseNameFromOodi lang code) cnf
+    let ii                       = toLang i18n lang
+        translateCourseName code = unsafePerformIO $
+            runReaderT (i18nCourseNameFromOodi lang code) cnf
 
--- course category div -------------------------------------------------
-            withCat n xs f = [shamlet|
-$forall ys <- L.groupBy (catGroup cnf n) xs
-    <div.courses>
-        #{ppCat n ys}
-        #{f ys}
-|]
--- course table --------------------------------------------------------
-            go n xs
-                | n == length categories = [shamlet|
-<table style="width:100%">
- $forall c <- xs
-  <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
-    <td style="width:10%">
-      <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
-        <b>#{getThing colCode c}
-
-    <td style="width:55%">
-
-      $maybe name <- translateCourseName (getThing colCode c)
-        #{name}
-      $nothing
-        #{getThing colCourseName c}
-
-      $with op <- getThing "op" c
-          $if not (T.null op)
-            \ (#{op} #{ii "op"})
-
-    <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
-    <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
-    <td.compact style="width:8%;font-family:monospace" title="#{getThing colLang c}">
-      $case T.words (getThing colLang c)
-        $of []
-        $of xs
-            <b>#{head xs}
-            $if null $ tail xs
-            $else
-                (#{T.intercalate ", " $ tail xs})
-
-    <td.compact style="width:12%" title="#{colWebsite}">
-      $maybe p <- getThingMaybe colWebsite c
-        $if not (T.null p)
-            \ #
-            <a href="#{p}">#{ii colWebsite}
-|]
-                | otherwise = withCat n xs (go (n + 1))
-
--- if it begins with a number, apply appropriate header ---------------
-            ppCat n xs     = [shamlet|
-$maybe x <- catAt cnf n (head xs)
-    $case n
-        $of 0
-            <h1>#{ii x}
-        $of 1
-            <h2>#{ii x}
-        $of 2
-            <h3>
-                <i>#{ii x}
-        $of 3
-            <h4>#{ii x}
-        $of 4
-            <h5>#{ii x}
-        $of 5
-            <h6>#{ii x}
-        $of _
-            <b>#{ii x}
+        -- course category div -------------------------------------------------
+        withCat n xs f =
+            [shamlet|
+                $forall ys <- L.groupBy (catGroup cnf n) xs
+                    <div.courses>
+                        #{ppCat n ys}
+                        #{f ys}
             |]
 
--- put everything together --------------------------------------------
-        in [shamlet|
-\<!-- title: #{lookup' lang $ pageTitle page} -->
-\<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" $ pageUrl page} -->
-\<!-- se (Svensk version): #{toUrlPath $ lookup' "se" $ pageUrl page} -->
-\<!-- en (English version): #{toUrlPath $ lookup' "en" $ pageUrl page} -->
-\ 
+        -- course table --------------------------------------------------------
+        go n xs
+            | n == length categories =
+                [shamlet|
+                    <table style="width:100%">
+                        $forall c <- xs
+                            <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
+                                <td style="width:10%">
+                                    <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
+                                        <b>#{getThing colCode c}
 
-\<!-- !!! IMPORTANT !!! -->
-\<!-- THIS PAGE IS GENERATED AUTOMATICALLY -- DO NOT EDIT DIRECTLY! -->
-\<!-- See https://github.com/SimSaladin/opetussivut instead -->
+                                <td style="width:55%">
 
-<p>
-  $with pg <- head pages
-    <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
-  $forall pg <- tail pages
-    \ | 
-    <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+                                    $maybe name <- translateCourseName (getThing colCode c)
+                                        #{name}
+                                    $nothing
+                                        #{getThing colCourseName c}
 
-<p>
-  #{markdown def $ LT.fromStrict $ ii "aputeksti"}
+                                    $with op <- getThing "op" c
+                                        $if not (T.null op)
+                                            \ (#{op} #{ii "op"})
 
-<p>
-  #{ii "Kieli"}:&nbsp;
-  <select id="select-kieli" name="kieli" onchange="updateList(this)">
-     <option value="any">#{ii "Kaikki"}
-     $forall l <- languages
-        <option value="#{l}">#{ii l}
+                                <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
+                                <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
+                                <td.compact style="width:8%;font-family:monospace" title="#{getThing colLang c}">
+                                    $case T.words (getThing colLang c)
+                                        $of []
+                                        $of xs
+                                            <b>#{head xs}
+                                            $if null $ tail xs
+                                            $else
+                                                (#{T.intercalate ", " $ tail xs})
 
-  #{ii "Taso"}:&nbsp;
-  <select id="select-taso" name="taso" onchange="updateList(this)">
-     <option value="any" >#{ii "Kaikki"}
-     $forall cat <- (categories !! categoryLevelTaso)
-        <option value="#{cat}">#{ii cat}
+                                <td.compact style="width:12%" title="#{colWebsite}">
+                                    $maybe p <- getThingMaybe colWebsite c
+                                        $if not (T.null p)
+                                            \ #
+                                            <a href="#{p}">#{ii colWebsite}
+                |]
+            | otherwise              = withCat n xs (go (n + 1))
 
-  #{ii "Lukukausi"}:&nbsp;
-  <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
-     <option value="any"   >#{ii "Kaikki"}
-     <option value="kevät" >#{ii "Kevät"}
-     <option value="syksy" >#{ii "Syksy"}
-     <option value="kesä"  >#{ii "Kesä"}
+        -- if it begins with a number, apply appropriate header ----------------
+        ppCat n xs     =
+            [shamlet|
+                $maybe x <- catAt cnf n (head xs)
+                    $case n
+                        $of 0
+                            <h1>#{ii x}
+                        $of 1
+                            <h2>#{ii x}
+                        $of 2
+                            <h3>
+                                <i>#{ii x}
+                        $of 3
+                            <h4>#{ii x}
+                        $of 4
+                            <h5>#{ii x}
+                        $of 5
+                            <h6>#{ii x}
+                        $of _
+                            <b>#{ii x}
+            |]
 
-<table style="width:100%">
-    <tr>
-        <td style="padding-left:0.5em;width:10%">#{ii colCode}
-        <td style="padding-left:0.5em;width:55%">#{ii colCourseName}
-        <td style="padding-left:0.5em;width:7%" >#{ii colPeriod}
-        <td style="padding-left:0.5em;width:7%" >#{ii colRepeats}
-        <td style="padding-left:0.5em;width:8%" >#{ii colLang}
-        <td style="padding-left:0.5em;width:12%">#{ii colWebsite}
+        -- put everything together --------------------------------------------
+    in [shamlet|
+        \<!-- title: #{lookup' lang $ pageTitle page} -->
+        \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookup' "fi" $ pageUrl page} -->
+        \<!-- se (Svensk version): #{toUrlPath $ lookup' "se" $ pageUrl page} -->
+        \<!-- en (English version): #{toUrlPath $ lookup' "en" $ pageUrl page} -->
+        \
 
-#{withCat 0 stuff (go 1)}
+        \<!-- !!! IMPORTANT !!! -->
+        \<!-- THIS PAGE IS GENERATED AUTOMATICALLY -- DO NOT EDIT DIRECTLY! -->
+        \<!-- See https://github.com/SimSaladin/opetussivut instead -->
 
-<p>#{ii "Päivitetty"} #{show time}
-<style>
-    .courses table { table-layout:fixed; }
-    .courses td.compact {
-        overflow:hidden;
-        text-overflow:ellipsis;
-        white-space:nowrap;
-    }
-    tr[data-pidetaan="next-year"] { color:gray; }
-<script type="text/javascript">
-  #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
-|]
+        <p>
+            $with pg <- head pages
+                <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+            $forall pg <- tail pages
+                \ |
+                <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
+
+        <p>
+            #{markdown def $ LT.fromStrict $ ii "aputeksti"}
+
+        <p>
+            #{ii "Kieli"}:&nbsp;
+            <select id="select-kieli" name="kieli" onchange="updateList(this)">
+                <option value="any">#{ii "Kaikki"}
+                $forall l <- languages
+                    <option value="#{l}">#{ii l}
+
+            #{ii "Taso"}:&nbsp;
+            <select id="select-taso" name="taso" onchange="updateList(this)">
+                <option value="any" >#{ii "Kaikki"}
+                $forall cat <- (categories !! categoryLevelTaso)
+                    <option value="#{cat}">#{ii cat}
+
+            #{ii "Lukukausi"}:&nbsp;
+            <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
+                <option value="any"   >#{ii "Kaikki"}
+                <option value="kevät" >#{ii "Kevät"}
+                <option value="syksy" >#{ii "Syksy"}
+                <option value="kesä"  >#{ii "Kesä"}
+
+            <table style="width:100%">
+                <tr>
+                    <td style="padding-left:0.5em;width:10%">#{ii colCode}
+                    <td style="padding-left:0.5em;width:55%">#{ii colCourseName}
+                    <td style="padding-left:0.5em;width:7%" >#{ii colPeriod}
+                    <td style="padding-left:0.5em;width:7%" >#{ii colRepeats}
+                    <td style="padding-left:0.5em;width:8%" >#{ii colLang}
+                    <td style="padding-left:0.5em;width:12%">#{ii colWebsite}
+
+            #{withCat 0 stuff (go 1)}
+
+            <p>#{ii "Päivitetty"} #{show time}
+            <style>
+                .courses table { table-layout:fixed; }
+                .courses td.compact {
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                }
+                tr[data-pidetaan="next-year"] { color:gray; }
+            <script type="text/javascript">
+                #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
+    |]
 
 
 -- | Creating the javascript functions of the buttons in the HTML files.
 jsLogic :: JavascriptUrl url
 jsLogic = [julius|
 
-fs = { };
+    fs = { };
 
-updateList = function(e) {
-    var name = e.getAttribute("name");
-    var opts = e.selectedOptions;
+    updateList = function(e) {
+        var name = e.getAttribute("name");
+        var opts = e.selectedOptions;
 
-    fs[name] = [];
-    for (var i = 0; i < opts.length; i++) {
-        fs[name].push(opts[i].getAttribute("value"));
+        fs[name] = [];
+        for (var i = 0; i < opts.length; i++) {
+            fs[name].push(opts[i].getAttribute("value"));
+        }
+
+        var xs = document.querySelectorAll(".courses tr");
+
+        for (var i = 0; i < xs.length; i++) {
+            xs[i].hidden = !matchesFilters(fs, xs[i]);
+        }
+
+        updateHiddenDivs();
     }
 
-    var xs = document.querySelectorAll(".courses tr");
-
-    for (var i = 0; i < xs.length; i++) {
-        xs[i].hidden = !matchesFilters(fs, xs[i]);
+    matchesFilters = function(fs, thing) {
+        for (var f in fs) {
+            if (fs[f] != "any") {
+                var m = false;
+                for (var i = 0; i < fs[f].length; i++) {
+                    if (thing.dataset[f].indexOf(fs[f][i]) > -1) {
+                        m = true;
+                        break;
+                    }
+                }
+                if (!m) return false;
+            }
+        }
+        return true;
     }
 
-    updateHiddenDivs();
-}
-
-matchesFilters = function(fs, thing) {
-    for (var f in fs) {
-        if (fs[f] != "any") {
-            var m = false;
-            for (var i = 0; i < fs[f].length; i++) {
-                if (thing.dataset[f].indexOf(fs[f][i]) > -1) {
-                    m = true;
+    updateHiddenDivs = function() {
+        var xs = document.querySelectorAll(".courses");
+        for (var i = 0; i < xs.length; i++) {
+            var hidden = true;
+            var ts = xs[i].getElementsByTagName("tr");
+            for (var j = 0; j < ts.length; j++) {
+                if (!ts[j].hidden) {
+                    hidden = false;
                     break;
                 }
             }
-            if (!m) return false;
+            xs[i].hidden = hidden;
         }
     }
-    return true;
-}
-
-updateHiddenDivs = function() {
-    var xs = document.querySelectorAll(".courses");
-    for (var i = 0; i < xs.length; i++) {
-        var hidden = true;
-        var ts = xs[i].getElementsByTagName("tr");
-        for (var j = 0; j < ts.length; j++) {
-            if (!ts[j].hidden) {
-                hidden = false;
-                break;
-            }
-        }
-        xs[i].hidden = hidden;
-    }
-}
 |]
 
 
