@@ -409,7 +409,7 @@ tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> Table          -- ^ Argument: The source table to use when creating the web page.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
-tableBody lang page (Table time _ stuff) cnf@Config{..} =
+tableBody lang page (Table time _ tableContent) cnf@Config{..} =
     let i18nTranslationOf        = toLang i18n lang
         translateCourseName code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
@@ -420,7 +420,11 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                 [shamlet|
                     <table style="width:100%">
                         $forall c <- xs
-                            <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}" data-kieli="#{getThing colLang c}" data-lukukausi="#{getThing colLukukausi c}" data-pidetaan="#{getThing "pidetään" c}">
+                            <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}"
+                                data-kieli="#{getThing colLang c}"
+                                data-lukukausi="#{getThing colLukukausi c}"
+                                data-pidetaan="#{getThing "pidetään" c}">
+
                                 <td style="width:10%">
                                     <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
                                         <b>#{getThing colCode c}
@@ -539,7 +543,7 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                     <td style="padding-left:0.5em;width:8%" >#{i18nTranslationOf colLang}
                     <td style="padding-left:0.5em;width:12%">#{i18nTranslationOf colWebsite}
 
-            #{withCat 0 stuff (go 1)}
+            #{withCat 0 tableContent (go 1)}
 
             <p>#{i18nTranslationOf "Päivitetty"} #{show time}
             <style>
