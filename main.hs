@@ -222,16 +222,16 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
     where rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
 
--- | Fetch a translation from the I18N database, /db/, found in /config.yaml/.
+-- | Fetch a translation from the 'I18N' database, /db/, found in /config.yaml/.
 --
--- If the text that is to be translated can't be found in the given database.
--- It'll fall back on the given text. If the selected language in this case is
--- not Finnish it will also warn the user that no translation for the selected
--- text can be found.
-toLang :: I18N  -- ^ Argument: The database to fetch from
-       -> Lang  -- ^ Argument: The language to fetch translation for
-       -> Text  -- ^ Argument: The text to translate
-       -> Text  -- ^ Return:   The translated text or the text to translate
+-- If the 'Text' that is to be translated can't be found in the given database.
+-- It'll fall back on the given 'Text' (the Finnish version). If the selected
+-- 'Lang'uage in this case is not Finnish it will also warn the user that no
+-- translation for the selected 'Text' can be found.
+toLang :: I18N  -- ^ Argument: The 'I18N' database to fetch translations from.
+       -> Lang  -- ^ Argument: The 'Lang'uage to fetch translation for.
+       -> Text  -- ^ Argument: The 'Text' to translate.
+       -> Text  -- ^ Return:   The translated 'Text' or the 'Text' to translate if no translation was found.
 toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
   where fallback | "fi" <- lang = key
@@ -240,16 +240,16 @@ toLang db lang key = maybe (trace ("Warn: no i18n db for key `" ++ T.unpack key 
 
 -- | Lookup a translation from any given map, containing 'y' types
 -- mapped to 'Lang' types. It only returns 'Just' values of the result.
-lookup' :: Lang         -- ^ Argument: The language to look for
-        -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from
-        -> y            -- ^ Return:   The value of type 'y' found in the map
+lookup' :: Lang         -- ^ Argument: The 'Lang'uage to look for.
+        -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from.
+        -> y            -- ^ Return:   The value of type 'y' found in the map.
 lookup' i = fromJust . Map.lookup i
 
 
 -- TODO: Check what this actually does.
 -- | 
-normalize :: Text   -- ^ Argument: 
-          -> Text   -- ^ Result:   
+normalize :: Text   -- ^ Argument: The 'Text' to normalize.
+          -> Text   -- ^ Result:   The normalized 'Text'.
 normalize =
     T.dropAround (`elem` " ,-!")
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
@@ -282,8 +282,8 @@ getOodiName =
         sub a b i = subRegex (mkRegexWithOpts a False True) i b
 
 
--- | Helper method to select the correct language when using WebOodi.
--- The language is changed by switching a number in the URL:
+-- | Helper method to select the correct 'Lang'uage when using WebOodi.
+-- The 'Lang'uage is changed by switching a number in the URL:
 --
 --      * 1 : fi (Finnish version)
 --
@@ -291,10 +291,10 @@ getOodiName =
 --
 --      * 6 : en (English version)
 --
--- If another language than the provided ones is used, the function
--- returns an empty string instead of a number.
-weboodiLang :: Lang     -- ^ The 'Lang' to use on WebOodi
-            -> Text     -- ^ Return:  The number to switch to in the WebOodi URL
+-- If another 'Lang'uage than the provided ones is used, the function
+-- returns an empty 'string' instead of a number.
+weboodiLang :: Lang     -- ^ Argument: The 'Lang' to use on WebOodi.
+            -> Text     -- ^ Return:   A 'Text' string consisting of the number to switch to in the WebOodi URL.
 weboodiLang lang
             | "fi" <- lang = "1"
             | "se" <- lang = "2"
@@ -302,14 +302,14 @@ weboodiLang lang
             | otherwise    = ""
 
 
--- TODO: Change the example to use the real base URL found in the config.yaml file
--- | Creates a hyperlink to use for accessing the selected language version of WebOodi.
+-- TODO: Change the example to use the real base URL found in the /config.yaml/ file
+-- | Creates a hyperlink to use for accessing the selected 'Lang'uage version of WebOodi.
 --
 -- The return value has the form of: /[base URL][1/2/6]"&Tunniste="[page ID]/.
-weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi
-            -> Lang     -- ^ Argument: Language to use on WebOodi
-            -> Text     -- ^ Argument: WebOodi page ID
-            -> Text     -- ^ Return:   The concatenated URL
+weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
+            -> Lang     -- ^ Argument: Language to use on WebOodi.
+            -> Text     -- ^ Argument: WebOodi page ID.
+            -> Text     -- ^ Return:   The concatenated URL.
 weboodiLink url lang pid = url <> weboodiLang lang <> "&Tunniste=" <> pid
 
 
@@ -319,6 +319,10 @@ oodiVar = unsafePerformIO newEmptyMVar
 {-# NOINLINE oodiVar #-}
 
 
+-- | Read the course names from the /oodiNameFile/.
+--
+-- If the file exists this function returns a map of translations for the different
+-- course names, otherwise it'll return an empty map.
 readOodiNames :: M (Map (Lang, Text) Text)
 readOodiNames = do
     Config{..} <- ask
@@ -328,7 +332,12 @@ readOodiNames = do
         else return Map.empty
 
 
-i18nCourseNameFromOodi :: Lang -> Text -> M (Maybe Text)
+-- | Get a translated name for a specific course, by looking it up from WebOodi.
+--
+--
+i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to lookup.
+                       -> Text              -- ^ Argument: The page ID of the WebOodi page.
+                       -> M (Maybe Text)    -- ^ Return:   The translation if found.
 i18nCourseNameFromOodi lang pid = do
     Config{..} <- ask
 
@@ -370,6 +379,7 @@ renderTable root lang pc@PageConf{..} table =
 -- ===========================================================================
 -- * Content
 -- ===========================================================================
+
 
 -- | How to render the data of the selected table into HTML using WebOodi
 -- to lookup course names in different languages.
@@ -584,7 +594,7 @@ updateHiddenDivs = function() {
 -- on the content in the 'Config' data and the different arguments.
 --
 -- This function will return the finished row, containing the separating
--- categories and the correct course information from the source table.
+-- 'Category's and the correct course information from the source 'Table'.
 toCourse :: Config          -- ^ Argument: The 'Config' to lookup page configuration data from.
          -> [Category]      -- ^ Argument: A list of 'Category's to pass on to the finished row.
          -> [Header]        -- ^ Argument: A list of 'Header's to select correct 'Text' from the given list.
@@ -615,16 +625,22 @@ doRepeats :: Text   -- ^ Argument:
 doRepeats x | T.any isLetter x = "-"
             | otherwise        = x
 
--- | 
-doLang :: Text      -- ^ Argument:
-       -> Text      -- ^ Return:   
+
+-- | Change the format of the @colLang@ column 'Header' in the source 'Table' to be
+-- in correct.
+--
+--          * Replace different ways of writing languages to the correct 'Lang' format.
+--
+--          * Replace word separators to single spaces.
+doLang :: Text      -- ^ Argument: The line of 'Text', that needs conversion.
+       -> Text      -- ^ Return:   The correctly formatted 'Text'.
 doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "en"
        . T.replace "ruotsi" "se"
        . T.unwords . T.words
        . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
 
--- | Accumulate a category to list of categories based on what categories
+-- | Accumulate a 'Category' to a list of 'Category's based on what categories
 -- cannot overlap
 accumCategory :: Config         -- ^ Argument: 
               -> Category       -- ^ Argument: 
