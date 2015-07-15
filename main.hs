@@ -95,15 +95,18 @@ main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT
 -- * Types
 -- ===========================================================================
 
+
 -- TODO: Why is it using the three types, ReaderT Config IO
 -- | Short hand for the combination of the three types.
 type M = ReaderT Config IO
+
 
 -- | The 'Lang' type is used as key for looking up the translations from the
 -- internationalization (I18N) data base found in the /config.yaml/ file.
 --
 -- It is used with acronyms of the languages: @fi@, @se@, @en@, ...
 type Lang = Text
+
 
 -- | Properties for generating individual web page bodies.
 data PageConf = PageConf {  -- See Note [Config and PageConf] below
@@ -114,6 +117,9 @@ data PageConf = PageConf {  -- See Note [Config and PageConf] below
               } deriving Generic
 instance Yaml.FromJSON PageConf
 
+
+-- | Overall properties used by the module to generate HTML code from the
+-- source 'Table' found in the wiki pages.
 data Config   = Config {    -- See Note [Config and PageConf] below
               -- File handling properties
                 rootDir         :: FilePath
@@ -139,22 +145,28 @@ data Config   = Config {    -- See Note [Config and PageConf] below
               } deriving Generic
 instance Yaml.FromJSON Config
 
+
 -- | Source 'Table'. Consists of a time stamp, a list of 'Header' objects and a list of 'Course' objects.
 data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
+
 -- | Extension of 'Data.Text'. Used as Column 'Header's when reading the source 'Table'.
 type Header       = Text
+
 
 -- TODO: Change the name of this type to fit its purpose more
 -- | A row in source 'Table'.
 type Course       = ([Category], Map Header ContentBlock)
 
+
 -- | Extension of 'Data.Text'. First column in source 'Table'.
 type Category     = Text
 
+
 -- | \<td\> HTML tag in source 'Table'.
 type ContentBlock = Text
+
 
 -- | Internationalization database.
 --
@@ -760,7 +772,7 @@ processTable cnf c = case cells of
     cells = map ($/ anyElement) (c $// element "tr")
 
 
--- | A row is either a category or course. The @[Category]@ is used as an
+-- | A row is either a category or course. The @['Category']@ is used as an
 -- accumulator.
 getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
 getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
