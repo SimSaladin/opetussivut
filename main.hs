@@ -684,11 +684,12 @@ findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "conflue
 -- element to it.
 --
 -- The 'cells' variable contains all the rows of the table. The first row contains some higher-level
--- headers (eg. "Vastaava opettaja"), hence this row is ignored. The second row contains the main 'Header's
+-- headers (eg. @Vastaava opettaja@), hence this row is ignored. The second row contains the main 'Header's
 -- of the different columns, and the rest of the rows are either 'Course' information or 'Category's
 -- separating the different 'Course' informations.
 --
--- The first column in the main 'Header' row is empty (this is the column containing the category headers).
+-- The first column in the main 'Header' row is empty (this is the column containing the category headers
+-- when looking at the Wiki Table).
 processTable :: Config      -- ^ Argument: Pointer to the /config.yaml/ file.
              -> Cursor      -- ^ Argument: XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
              -> Maybe Table -- ^ Return: The processed 'Maybe' 'Table'.
