@@ -79,16 +79,16 @@ categoryLevelTaso = 1
 -- It reads the /config.yaml/ file into memory before doing anything else.
 main :: IO ()
 main = Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
-    where
-  go = do
-      Config{..} <- ask
-      forM_ pages $ \pc@PageConf{..} -> do
-          dt <- getData pageId
-          case dt of
-              Nothing -> liftIO $ putStrLn "Warning: failed to fetch doc, not updating listing"
-              Just dt' -> do
-                  table <- parseTable dt'
-                  forM_ languages $ \lang -> renderTable rootDir lang pc table
+  where
+    go = do
+        Config{..} <- ask
+        forM_ pages $ \pc@PageConf{..} -> do
+            dt <- getData pageId
+            case dt of
+                Nothing -> liftIO $ putStrLn "Warning: failed to fetch doc, not updating listing"
+                Just dt' -> do
+                    table <- parseTable dt'
+                    forM_ languages $ \lang -> renderTable rootDir lang pc table
 
 
 -- ===========================================================================
@@ -102,7 +102,7 @@ type M = ReaderT Config IO
 
 
 -- | The 'Lang' type is used as key for looking up the translations from the
--- internationalization (I18N) data base found in the /config.yaml/ file.
+-- internationalization ('I18N') database found in the /config.yaml/ file.
 --
 -- It is used with acronyms of the languages: @fi@, @se@, @en@, ...
 type Lang = Text
@@ -261,9 +261,11 @@ normalize =
 -- ===========================================================================
 
 
--- | Fetch the course name from the WebOodi url.
-getOodiName :: Text         -- ^ Argument: 
-            -> Maybe Text   -- ^ Return:   
+-- | Fetch the course name from the WebOodi URL. It looks for a HTML tag containing
+-- the text /tauluotsikko\"?>/ to find the name of the course. It then replaces some
+-- sub strings in the course name with Unicode characters.
+getOodiName :: Text         -- ^ Argument: 'Text' containing a raw version of the course name.
+            -> Maybe Text   -- ^ Return:   The Unicode formatted version of the course name.
 getOodiName =
     fmap (T.pack
           . sub "&aring;" "å"
@@ -310,7 +312,7 @@ weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
             -> Lang     -- ^ Argument: Language to use on WebOodi.
             -> Text     -- ^ Argument: WebOodi page ID.
             -> Text     -- ^ Return:   The concatenated URL.
-weboodiLink url lang pid = url <> weboodiLang lang <> "&Tunniste=" <> pid
+weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
 
 -- TODO: What does it do?
@@ -336,9 +338,9 @@ readOodiNames = do
 --
 --
 i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to lookup.
-                       -> Text              -- ^ Argument: The page ID of the WebOodi page.
+                       -> Text              -- ^ Argument: The WebOodi page ID.
                        -> M (Maybe Text)    -- ^ Return:   The translation if found.
-i18nCourseNameFromOodi lang pid = do
+i18nCourseNameFromOodi lang pageId = do
     Config{..} <- ask
 
     ov <- liftIO $ tryTakeMVar oodiVar
@@ -347,14 +349,14 @@ i18nCourseNameFromOodi lang pid = do
         Nothing -> readOodiNames
     liftIO $ putMVar oodiVar oodiNames
 
-    case Map.lookup (lang, pid) oodiNames of
+    case Map.lookup (lang, pageId) oodiNames of
         Just name -> return $ Just name
         Nothing   -> do
-            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink weboodiUrl lang pid)
+            raw <- liftIO $ fetch8859 (T.unpack $ weboodiLink weboodiUrl lang pageId)
             case getOodiName raw of
                 Nothing   -> return Nothing
                 Just name -> do
-                    let newNames = Map.insert (lang, pid) name oodiNames
+                    let newNames = Map.insert (lang, pageId) name oodiNames
                     liftIO $ do _ <- swapMVar oodiVar newNames
                                 writeFile oodiNameFile (show newNames)
                     return $ Just name
@@ -383,7 +385,7 @@ renderTable root lang pc@PageConf{..} table =
 
 -- | How to render the data of the selected table into HTML using WebOodi
 -- to lookup course names in different languages.
-tableBody :: Lang           -- ^ Argument: The currently used language.
+tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> PageConf       -- ^ Argument: More specific information of the current web page being created.
           -> Table          -- ^ Argument: The source table to use when creating the web page.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
@@ -619,9 +621,11 @@ toCourse Config{..} cats hs iscur xs =
             | otherwise                                = Nothing
 
 
--- | 
-doRepeats :: Text   -- ^ Argument: 
-          -> Text   -- ^ Return:   
+-- | Checks the column @/toistuu/@ from the source 'Table'. If there's anything but
+-- numericals or non-alpha signs, it'll return a 'string' consisting of the '-' sign.
+-- Else it returns the value of the cell.
+doRepeats :: Text   -- ^ Argument: The 'Text' in the cell of the column.
+          -> Text   -- ^ Return:   The value of 'Text' argument if there isn't any alpha characters in the cell.
 doRepeats x | T.any isLetter x = "-"
             | otherwise        = x
 
@@ -640,9 +644,10 @@ doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "e
        . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
 
+-- TODO: Understand what this code exactly does.
 -- | Accumulate a 'Category' to a list of 'Category's based on what categories
--- cannot overlap
-accumCategory :: Config         -- ^ Argument: 
+-- cannot overlap.
+accumCategory :: Config         -- ^ Argument:
               -> Category       -- ^ Argument: 
               -> [Category]     -- ^ Argument: 
               -> [Category]     -- ^ Return:   
@@ -652,6 +657,7 @@ accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) catego
   where f i = concat $ L.drop i categories
 
 
+-- TODO: Understand what this does
 -- | 
 toCategory :: Config            -- ^ Argument: 
            -> Text              -- ^ Argument: 
@@ -667,9 +673,10 @@ catAt :: Config         -- ^ Argument:
       -> Int            -- ^ Argument: 
       -> Course         -- ^ Argument: 
       -> Maybe Text     -- ^ Return:   
-catAt Config{..} n (cats, _) = case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
-                                   x:_ -> Just x
-                                   _   -> Nothing
+catAt Config{..} n (cats, _) = 
+    case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
+        x:_ -> Just x
+        _   -> Nothing
 
 
 -- | 
@@ -720,15 +727,15 @@ parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 -- | Fetch a confluence doc by id.
 getData :: String                   -- ^ Argument: 
         -> M (Maybe XML.Document)   -- ^ Return: 
-getData pid = do
+getData pageId = do
     Config{..} <- ask
     xs         <- lift getArgs
-    let file   = cacheDir <> "/" <> pid <> ".html"
+    let file   = cacheDir <> "/" <> pageId <> ".html"
 
     str <- lift $ case xs of
         "cache" : _ -> Just <$> LT.readFile file
-        "fetch" : _ -> do liftIO . putStrLn $ "Fetching doc id " <> show pid
-                          r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pid)
+        "fetch" : _ -> do liftIO . putStrLn $ "Fetching doc id " <> show pageId
+                          r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
                           if "<title>Log In" `LT.isInfixOf` r
                               then return Nothing
                               else LT.writeFile file r >> return (Just r)
@@ -788,9 +795,13 @@ processTable cnf c = case cells of
     cells = map ($/ anyElement) (c $// element "tr")
 
 
--- | A row is either a category or course. The @['Category']@ is used as an
+-- | A row is either a category or a course. The @['Category']@ is used as an
 -- accumulator.
-getRow :: Config -> [Header] -> [Category] -> [Cursor] -> ([Category], Maybe Course)
+getRow :: Config                        -- ^ Argument: 
+       -> [Header]                      -- ^ Argument: 
+       -> [Category]                    -- ^ Argument: 
+       -> [Cursor]                      -- ^ Argument: 
+       -> ([Category], Maybe Course)    -- ^ Return:   
 getRow cnf@Config{..} hs cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
     where go []        _       = (cats, Nothing)
           go (mc : vs) classes = case toCategory cnf mc of
