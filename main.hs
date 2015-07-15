@@ -214,10 +214,10 @@ toFilePath :: FilePath  -- ^ Argument: The root directory.
 toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 
--- | A hack, for confluence html is far from the (strictly) spec.
+-- | A hack, because confluence HTML is far from the (strictly) spec.
 --
--- weboodi's HTML is just horrible (imo it's not even HTML), so we use
--- another regex to parse it (and not with the XML parser).
+-- WebOodi's HTML is just horrible (imo it's not even HTML), so we use
+-- another regex to parse it (before the XML parser is used).
 regexes :: [String -> String]
 regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
@@ -750,25 +750,31 @@ getData pageId = do
 
     str <- lift $ case xs of
         "cache" : _ -> Just <$> LT.readFile file
-        "fetch" : _ -> do liftIO . putStrLn $ "Fetching doc id " <> show pageId
-                          r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
-                          if "<title>Log In" `LT.isInfixOf` r
-                              then return Nothing
-                              else LT.writeFile file r >> return (Just r)
+        "fetch" : _ -> do 
+                        liftIO . putStrLn $ "Fetching doc id " <> show pageId
+                        r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
+                        if "<title>Log In" `LT.isInfixOf` r
+                            then 
+                                trace ("Private Wiki Table - Can't read...")
+                                return Nothing
+                            else
+                                trace ("Writing to file: " ++ file)
+                                LT.writeFile file r >> return (Just r)
         _           -> putStrLn "Usage: opetussivut <fetch|cache>" >> exitFailure
 
     return $ cleanAndParse <$> str
 
 
--- | 
-cleanAndParse :: LT.Text        -- ^ Argument: 
-              -> XML.Document   -- ^ Return: 
+-- | This function takes a whole wiki table in 'Text' form and removes some standard
+-- HTML tags from the text (see 'regexes' for more information). It then parses an XML
+-- document from the HTML bodied 'Text' stream.
+--
+-- Uses the 'XML.decodeHtmlEntities' setting to decode the 'Text' into XML.
+cleanAndParse :: LT.Text        -- ^ Argument: The raw 'Text' version of the cached wiki page.
+              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'Text'.
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
-
-
--- | 
-parseSettings :: XML.ParseSettings
-parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
+  where
+    parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
 
 -- ===========================================================================
