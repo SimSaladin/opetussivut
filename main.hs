@@ -337,6 +337,7 @@ readOodiNames = do
         else return Map.empty
 
 
+-- TODO: Check what this method does, step by step.
 -- | Get a translated name for a specific course, by looking it up from WebOodi.
 --
 --
@@ -363,6 +364,13 @@ i18nCourseNameFromOodi lang pageId = do
                     liftIO $ do _ <- swapMVar oodiVar newNames
                                 writeFile oodiNameFile (show newNames)
                     return $ Just name
+
+
+-- | Reads the web page at the given URL and returns a utf-8 converted version of the
+-- page. WebOodi is encoded in iso-8859-1 encoding.
+fetch8859 :: String     -- ^ Argument: URL with iso-8859-1 encoding.
+          -> IO Text    -- ^ Return:   The web page converted to utf-8.
+fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
 
 -- ===========================================================================
@@ -599,6 +607,7 @@ jsLogic = [julius|
 -- ===========================================================================
 
 
+-- TODO: Add an alternative for 'kesä, kenttä'
 -- | Creates a row for the current 'Table'. The output will differ depending 
 -- on the content in the 'Config' data and the different arguments.
 --
@@ -726,14 +735,14 @@ getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang 
 -- ===========================================================================
 
 
--- | 
-parseSettings :: XML.ParseSettings
-parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
-
-
--- | Fetch a confluence doc by id.
-getData :: String                   -- ^ Argument: 
-        -> M (Maybe XML.Document)   -- ^ Return: 
+-- | The main entry of the application. This function handles the command line
+-- arguments for caching and fetching the wiki tables.
+--
+-- Fetch a confluence doc (wiki page) by id. This function reads the wiki
+-- page with the given page ID, and parses it as an XML-document. The result
+-- is cleaned with the 'regexes' function.
+getData :: String                   -- ^ Argument: The page ID.
+        -> M (Maybe XML.Document)   -- ^ Return:   The cleaned XML-document, if found any.
 getData pageId = do
     Config{..} <- ask
     xs         <- lift getArgs
@@ -757,10 +766,9 @@ cleanAndParse :: LT.Text        -- ^ Argument:
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
 
 
--- |
-fetch8859 :: String     -- ^ Argument: 
-          -> IO Text    -- ^ Return: 
-fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
+-- | 
+parseSettings :: XML.ParseSettings
+parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
 
 
 -- ===========================================================================
