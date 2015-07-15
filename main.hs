@@ -410,7 +410,7 @@ tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ stuff) cnf@Config{..} =
-    let ii                       = toLang i18n lang
+    let i18nTranslationOf        = toLang i18n lang
         translateCourseName code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
@@ -434,7 +434,7 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
 
                                     $with op <- getThing "op" c
                                         $if not (T.null op)
-                                            \ (#{op} #{ii "op"})
+                                            \ (#{op} #{i18nTranslationOf "op"})
 
                                 <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
                                 <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
@@ -451,7 +451,7 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                                     $maybe p <- getThingMaybe colWebsite c
                                         $if not (T.null p)
                                             \ #
-                                            <a href="#{p}">#{ii colWebsite}
+                                            <a href="#{p}">#{i18nTranslationOf colWebsite}
                 |]
             | otherwise              = withCat n xs (go (n + 1))
 
@@ -461,20 +461,20 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                 $maybe x <- catAt cnf n (head xs)
                     $case n
                         $of 0
-                            <h1>#{ii x}
+                            <h1>#{i18nTranslationOf x}
                         $of 1
-                            <h2>#{ii x}
+                            <h2>#{i18nTranslationOf x}
                         $of 2
                             <h3>
-                                <i>#{ii x}
+                                <i>#{i18nTranslationOf x}
                         $of 3
-                            <h4>#{ii x}
+                            <h4>#{i18nTranslationOf x}
                         $of 4
-                            <h5>#{ii x}
+                            <h5>#{i18nTranslationOf x}
                         $of 5
-                            <h6>#{ii x}
+                            <h6>#{i18nTranslationOf x}
                         $of _
-                            <b>#{ii x}
+                            <b>#{i18nTranslationOf x}
             |]
 
         -- course category div -------------------------------------------------
@@ -486,7 +486,7 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
                         #{f ys}
             |]
 
-        -- put everything together --------------------------------------------
+        -- put everything together ---------------------------------------------
     in [shamlet|
         \<!-- title: #{lookupLang lang $ pageTitle page} -->
         \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookupLang "fi" $ pageUrl page} -->
@@ -495,8 +495,9 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
         \
 
         \<!-- !!! IMPORTANT !!! -->
-        \<!-- THIS PAGE IS GENERATED AUTOMATICALLY -- DO NOT EDIT DIRECTLY! -->
+        \<!-- THIS PAGE IS GENERATED AUTOMATICALLY - DO NOT EDIT DIRECTLY! -->
         \<!-- See https://github.com/SimSaladin/opetussivut instead -->
+        \
 
         <p>
             $with pg <- head pages
@@ -504,42 +505,43 @@ tableBody lang page (Table time _ stuff) cnf@Config{..} =
             $forall pg <- tail pages
                 \ |
                 <a href="#{toUrlPath $ fromJust $ Map.lookup lang $ pageUrl pg}">#{fromJust $ Map.lookup lang $ pageTitle pg}
-
+        \
         <p>
-            #{markdown def $ LT.fromStrict $ ii "aputeksti"}
+            #{markdown def $ LT.fromStrict $ i18nTranslationOf "aputeksti"}
 
+        \
         <p>
-            #{ii "Kieli"}:&nbsp;
+            #{i18nTranslationOf "Kieli"}:&nbsp;
             <select id="select-kieli" name="kieli" onchange="updateList(this)">
-                <option value="any">#{ii "Kaikki"}
+                <option value="any">#{i18nTranslationOf "Kaikki"}
                 $forall l <- languages
-                    <option value="#{l}">#{ii l}
+                    <option value="#{l}">#{i18nTranslationOf l}
 
-            #{ii "Taso"}:&nbsp;
+            #{i18nTranslationOf "Taso"}:&nbsp;
             <select id="select-taso" name="taso" onchange="updateList(this)">
-                <option value="any" >#{ii "Kaikki"}
+                <option value="any" >#{i18nTranslationOf "Kaikki"}
                 $forall cat <- (categories !! categoryLevelTaso)
-                    <option value="#{cat}">#{ii cat}
+                    <option value="#{cat}">#{i18nTranslationOf cat}
 
-            #{ii "Lukukausi"}:&nbsp;
+            #{i18nTranslationOf "Lukukausi"}:&nbsp;
             <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
-                <option value="any"   >#{ii "Kaikki"}
-                <option value="kevät" >#{ii "Kevät"}
-                <option value="syksy" >#{ii "Syksy"}
-                <option value="kesä"  >#{ii "Kesä"}
+                <option value="any"   >#{i18nTranslationOf "Kaikki"}
+                <option value="kevät" >#{i18nTranslationOf "Kevät"}
+                <option value="syksy" >#{i18nTranslationOf "Syksy"}
+                <option value="kesä"  >#{i18nTranslationOf "Kesä"}
 
             <table style="width:100%">
                 <tr>
-                    <td style="padding-left:0.5em;width:10%">#{ii colCode}
-                    <td style="padding-left:0.5em;width:55%">#{ii colCourseName}
-                    <td style="padding-left:0.5em;width:7%" >#{ii colPeriod}
-                    <td style="padding-left:0.5em;width:7%" >#{ii colRepeats}
-                    <td style="padding-left:0.5em;width:8%" >#{ii colLang}
-                    <td style="padding-left:0.5em;width:12%">#{ii colWebsite}
+                    <td style="padding-left:0.5em;width:10%">#{i18nTranslationOf colCode}
+                    <td style="padding-left:0.5em;width:55%">#{i18nTranslationOf colCourseName}
+                    <td style="padding-left:0.5em;width:7%" >#{i18nTranslationOf colPeriod}
+                    <td style="padding-left:0.5em;width:7%" >#{i18nTranslationOf colRepeats}
+                    <td style="padding-left:0.5em;width:8%" >#{i18nTranslationOf colLang}
+                    <td style="padding-left:0.5em;width:12%">#{i18nTranslationOf colWebsite}
 
             #{withCat 0 stuff (go 1)}
 
-            <p>#{ii "Päivitetty"} #{show time}
+            <p>#{i18nTranslationOf "Päivitetty"} #{show time}
             <style>
                 .courses table { table-layout:fixed; }
                 .courses td.compact {
