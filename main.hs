@@ -649,7 +649,7 @@ accumCategory :: Config         -- ^ Argument:
 accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
     Nothing -> error $ "Unknown category: " ++ show c
     Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
-    where f i = concat $ L.drop i categories
+  where f i = concat $ L.drop i categories
 
 
 -- | 
