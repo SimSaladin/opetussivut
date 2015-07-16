@@ -432,7 +432,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                     <a href="#{weboodiLink weboodiUrl lang $ getCellContent colCode c}">
                                         <b>#{getCellContent colCode c}
 
-                                <td style="width:55%">
+                                <td style="width:57%">
 
                                     $maybe name <- translateCourseName (getCellContent colCode c)
                                         #{name}
@@ -443,9 +443,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                         $if not (T.null op)
                                             \ (#{op} #{i18nTranslationOf "op"})
 
-                                <td.compact style="width:7%"  title="#{getCellContent colPeriod c}">#{getCellContent colPeriod c}
-                                <td.compact style="width:7%"  title="#{getCellContent colRepeats c}">#{getCellContent colRepeats c}
-                                <td.compact style="width:8%;font-family:monospace" title="#{getCellContent colLang c}">
+                                <td.compact style="width:8%"  title="#{getCellContent colPeriod c}">#{getCellContent colPeriod c}
+                                <td.compact style="width:8%"  title="#{getCellContent colRepeats c}">#{getCellContent colRepeats c}
+                                <td.compact style="width:12%;font-family:monospace" title="#{getCellContent colLang c}">
                                     $case T.words (getCellContent colLang c)
                                         $of []
                                         $of rows
@@ -454,7 +454,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                             $else
                                                 (#{T.intercalate ", " $ tail rows})
 
-                                <td.compact style="width:12%" title="#{colWebsite}">
+                                <td.compact style="width:5%" title="#{colWebsite}">
                                     $maybe p <- getCellContentMaybe colWebsite c
                                         $if not (T.null p)
                                             \ #
@@ -555,11 +555,11 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 <table style="width:100%">
                     <tr>
                         <td style="width:10%">#{i18nTranslationOf colCode}
-                        <td style="width:55%">#{i18nTranslationOf colCourseName}
-                        <td style="width:7%" >#{i18nTranslationOf colPeriod}
-                        <td style="width:7%" >#{i18nTranslationOf colRepeats}
-                        <td style="width:8%" >#{i18nTranslationOf colLang}
-                        <td style="width:12%">#{i18nTranslationOf colWebsite}
+                        <td style="width:57%">#{i18nTranslationOf colCourseName}
+                        <td style="width:8%" >#{i18nTranslationOf colPeriod}
+                        <td style="width:8%" >#{i18nTranslationOf colRepeats}
+                        <td style="width:12%" >#{i18nTranslationOf colLang}
+                        <td style="width:5%">#{i18nTranslationOf colWebsite}
 
             #{courseTable 0 $ tail tableContent}
 
