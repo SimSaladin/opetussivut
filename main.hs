@@ -164,11 +164,13 @@ type Header       = Text
 
 
 -- TODO: Change the name of this type to fit its purpose more
--- | A row in source 'Table'.
+-- | A row in source 'Table'. Each cell of the 'Table' row is mapped to a 'Header', and
+-- each cell can have multiple 'Category's coupled to it (see 'Category').
 type Course       = ([Category], Map Header ContentBlock)
 
 
--- | Extension of 'Data.Text'. First column in source 'Table'.
+-- | Extension of 'Data.Text'. First column in source 'Table'. Each 'Course' can have
+-- several 'Category's (eg. @Pääaineopinnot@, @Perusopinnot@, @Pakolliset@, etc).
 type Category     = Text
 
 
@@ -415,79 +417,93 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
         -- course table --------------------------------------------------------
-        go n xs
-            | n == length categories =
+        courseTable n rows
+            | n < length categories = withCat n rows $ courseTable (n + 1)
+            | otherwise             =
                 [shamlet|
-                    <table style="width:100%">
-                        $forall c <- xs
+                    <table>
+                        $forall c <- rows
                             <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}"
-                                data-kieli="#{getThing colLang c}"
-                                data-lukukausi="#{getThing colLukukausi c}"
-                                data-pidetaan="#{getThing "pidetään" c}">
+                                data-kieli="#{getCellContent colLang c}"
+                                data-lukukausi="#{getCellContent colLukukausi c}"
+                                data-pidetaan="#{getCellContent "pidetään" c}">
 
                                 <td style="width:10%">
-                                    <a href="#{weboodiLink weboodiUrl lang $ getThing colCode c}">
-                                        <b>#{getThing colCode c}
+                                    <a href="#{weboodiLink weboodiUrl lang $ getCellContent colCode c}">
+                                        <b>#{getCellContent colCode c}
 
                                 <td style="width:55%">
 
-                                    $maybe name <- translateCourseName (getThing colCode c)
+                                    $maybe name <- translateCourseName (getCellContent colCode c)
                                         #{name}
                                     $nothing
-                                        #{getThing colCourseName c}
+                                        #{getCellContent colCourseName c}
 
-                                    $with op <- getThing "op" c
+                                    $with op <- getCellContent "op" c
                                         $if not (T.null op)
                                             \ (#{op} #{i18nTranslationOf "op"})
 
-                                <td.compact style="width:7%"  title="#{getThing colPeriod c}">#{getThing colPeriod c}
-                                <td.compact style="width:7%"  title="#{getThing colRepeats c}">#{getThing colRepeats c}
-                                <td.compact style="width:8%;font-family:monospace" title="#{getThing colLang c}">
-                                    $case T.words (getThing colLang c)
+                                <td.compact style="width:7%"  title="#{getCellContent colPeriod c}">#{getCellContent colPeriod c}
+                                <td.compact style="width:7%"  title="#{getCellContent colRepeats c}">#{getCellContent colRepeats c}
+                                <td.compact style="width:8%;font-family:monospace" title="#{getCellContent colLang c}">
+                                    $case T.words (getCellContent colLang c)
                                         $of []
-                                        $of xs
-                                            <b>#{head xs}
-                                            $if null $ tail xs
+                                        $of rows
+                                            <b>#{head rows}
+                                            $if null $ tail rows
                                             $else
-                                                (#{T.intercalate ", " $ tail xs})
+                                                (#{T.intercalate ", " $ tail rows})
 
                                 <td.compact style="width:12%" title="#{colWebsite}">
-                                    $maybe p <- getThingMaybe colWebsite c
+                                    $maybe p <- getCellContentMaybe colWebsite c
                                         $if not (T.null p)
                                             \ #
                                             <a href="#{p}">#{i18nTranslationOf colWebsite}
                 |]
-            | otherwise              = withCat n xs (go (n + 1))
+
 
         -- if it begins with a number, apply appropriate header ----------------
-        ppCat n xs     =
+        catHeader n category =
             [shamlet|
-                $maybe x <- catAt cnf n (head xs)
-                    $case n
-                        $of 0
-                            <h1>#{i18nTranslationOf x}
-                        $of 1
-                            <h2>#{i18nTranslationOf x}
-                        $of 2
-                            <h3>
-                                <i>#{i18nTranslationOf x}
-                        $of 3
-                            <h4>#{i18nTranslationOf x}
-                        $of 4
-                            <h5>#{i18nTranslationOf x}
-                        $of 5
-                            <h6>#{i18nTranslationOf x}
-                        $of _
-                            <b>#{i18nTranslationOf x}
+                $case n
+                    $of 0
+                        <h1>
+                            #{translation}
+                    $of 1
+                        <h2>
+                            #{translation}
+                    $of 2
+                        <h3>
+                            <i>#{translation}
+                    $of 3
+                        <h4>
+                            #{translation}
+                    $of 4
+                        <h5>
+                            #{translation}
+                    $of 5
+                        <h6>
+                            #{translation}
+                    $of _
+                        <b>
+                            #{translation}
             |]
+          where
+            translation = i18nTranslationOf category
 
         -- course category div -------------------------------------------------
-        withCat n xs f =
+        {-
+            Group the table rows into lists of table rows based on the Category
+            they belong to. Then loop over all cateogy based lists to generate
+            the different listings.
+        -}
+        withCat n rows f =
             [shamlet|
-                $forall ys <- L.groupBy (catGroup cnf n) xs
+                $forall groupedRows <- L.groupBy (catGroup cnf n) rows
                     <div.courses>
-                        #{ppCat n ys}
-                        #{f ys}
+                        $maybe category <- catAt cnf n (head groupedRows)
+                            #{catHeader n category}
+                        #{f groupedRows}
             |]
 
         -- put everything together ---------------------------------------------
@@ -507,55 +523,76 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
             $with pg <- head pages
                 <a href="#{toUrlPath $ lookupLang lang $ pageUrl pg}">#{lookupLang lang $ pageTitle pg}
             $forall pg <- tail pages
-                \ |
+                |
                 <a href="#{toUrlPath $ lookupLang lang $ pageUrl pg}">#{lookupLang lang $ pageTitle pg}
-        \
+
+
+        #{markdown def $ LT.fromStrict $ i18nTranslationOf "aputeksti"}
+
+
+        <div>
+            <div.buttons>
+                #{i18nTranslationOf "Kieli"}:&nbsp;
+                <select id="select-kieli" name="kieli" onchange="updateList(this)">
+                    <option value="any">#{i18nTranslationOf "Kaikki"}
+                    $forall l <- languages
+                        <option value="#{l}">#{i18nTranslationOf l}
+
+                #{i18nTranslationOf "Taso"}:&nbsp;
+                <select id="select-taso" name="taso" onchange="updateList(this)">
+                    <option value="any" >#{i18nTranslationOf "Kaikki"}
+                    $forall cat <- (categories !! categoryLevelTaso)
+                        <option value="#{cat}">#{i18nTranslationOf cat}
+
+                #{i18nTranslationOf "Lukukausi"}:&nbsp;
+                <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
+                    <option value="any"   >#{i18nTranslationOf "Kaikki"}
+                    <option value="kevät" >#{i18nTranslationOf "Kevät"}
+                    <option value="syksy" >#{i18nTranslationOf "Syksy"}
+                    <option value="kesä"  >#{i18nTranslationOf "Kesä"}
+
+            <div.headers>
+                <table style="width:100%">
+                    <tr>
+                        <td style="width:10%">#{i18nTranslationOf colCode}
+                        <td style="width:55%">#{i18nTranslationOf colCourseName}
+                        <td style="width:7%" >#{i18nTranslationOf colPeriod}
+                        <td style="width:7%" >#{i18nTranslationOf colRepeats}
+                        <td style="width:8%" >#{i18nTranslationOf colLang}
+                        <td style="width:12%">#{i18nTranslationOf colWebsite}
+
+            #{courseTable 0 $ tail tableContent}
+
         <p>
-            #{markdown def $ LT.fromStrict $ i18nTranslationOf "aputeksti"}
+            #{i18nTranslationOf "Päivitetty"} #{show time}
 
-        \
-        <p>
-            #{i18nTranslationOf "Kieli"}:&nbsp;
-            <select id="select-kieli" name="kieli" onchange="updateList(this)">
-                <option value="any">#{i18nTranslationOf "Kaikki"}
-                $forall l <- languages
-                    <option value="#{l}">#{i18nTranslationOf l}
+        <style>
+            .buttons {
+                padding:1em;
+            }
 
-            #{i18nTranslationOf "Taso"}:&nbsp;
-            <select id="select-taso" name="taso" onchange="updateList(this)">
-                <option value="any" >#{i18nTranslationOf "Kaikki"}
-                $forall cat <- (categories !! categoryLevelTaso)
-                    <option value="#{cat}">#{i18nTranslationOf cat}
+            .headers table {
+                width:100%;
+                table-layout:fixed;
+            }
 
-            #{i18nTranslationOf "Lukukausi"}:&nbsp;
-            <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
-                <option value="any"   >#{i18nTranslationOf "Kaikki"}
-                <option value="kevät" >#{i18nTranslationOf "Kevät"}
-                <option value="syksy" >#{i18nTranslationOf "Syksy"}
-                <option value="kesä"  >#{i18nTranslationOf "Kesä"}
+            .courses table {
+                width:100%;
+                table-layout:fixed;
+            }
 
-            <table style="width:100%">
-                <tr>
-                    <td style="padding-left:0.5em;width:10%">#{i18nTranslationOf colCode}
-                    <td style="padding-left:0.5em;width:55%">#{i18nTranslationOf colCourseName}
-                    <td style="padding-left:0.5em;width:7%" >#{i18nTranslationOf colPeriod}
-                    <td style="padding-left:0.5em;width:7%" >#{i18nTranslationOf colRepeats}
-                    <td style="padding-left:0.5em;width:8%" >#{i18nTranslationOf colLang}
-                    <td style="padding-left:0.5em;width:12%">#{i18nTranslationOf colWebsite}
+            .courses td.compact {
+                overflow:hidden;
+                text-overflow:ellipsis;
+                white-space:nowrap;
+            }
 
-            #{withCat 0 tableContent (go 1)}
+            tr[data-pidetaan="next-year"] {
+                color:gray;
+            }
 
-            <p>#{i18nTranslationOf "Päivitetty"} #{show time}
-            <style>
-                .courses table { table-layout:fixed; }
-                .courses td.compact {
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                    white-space:nowrap;
-                }
-                tr[data-pidetaan="next-year"] { color:gray; }
-            <script type="text/javascript">
-                #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
+        <script type="text/javascript">
+            #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
     |]
 
 
@@ -814,52 +851,50 @@ doRepeats x | T.any isLetter x = "-"
             | otherwise        = x
 
 
--- | 
-catGroup :: Config      -- ^ Argument: 
-         -> Int         -- ^ Argument: 
-         -> Course      -- ^ Argument: 
-         -> Course      -- ^ Argument: 
-         -> Bool        -- ^ Return:   
+-- | The 'Course' in this case is a row in the 'Table'. This function compares two rows
+-- and checks if the values are 'Category's, it will compare the 'Text's of them.
+-- It will return true if both of the applied 'Course' arguments have the same text.
+catGroup :: Config      -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
+         -> Int         -- ^ Argument: Category at level @n@ in /config.yaml/.
+         -> Course      -- ^ Argument: First 'Table' row to compare.
+         -> Course      -- ^ Argument: Second 'Table' row to compare.
+         -> Bool        -- ^ Return:   True if the two rows have the same 'Category' 'Text'.
 catGroup cnf n = (==) `on` catAt cnf n
 
 
--- | 
-catAt :: Config         -- ^ Argument: 
-      -> Int            -- ^ Argument: 
-      -> Course         -- ^ Argument: 
-      -> Maybe Text     -- ^ Return:   
-catAt Config{..} n (cats, _) = 
+-- | Returns the value of the first found 'Category' that matches the @categories@ at
+-- level @n@ in /config.yaml/.
+catAt :: Config         -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
+      -> Int            -- ^ Argument: Category at level @n@ in /config.yaml/.
+      -> Course         -- ^ Argument: A 'Table' row consisting of only a 'Category' 'Text'.
+      -> Maybe Text     -- ^ Return:   The first found value matching @categories@ at level @n@.
+catAt Config{..} n (cats, _) =
     case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
         x:_ -> Just x
         _   -> Nothing
 
 
--- TODO: Fix the name of this function
--- | 
-getThing :: Text        -- ^ Argument: 
-         -> Course      -- ^ Argument: 
-         -> Text        -- ^ Return: 
-getThing k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "Key not found: " <> k) $ getThingMaybe k c
+-- | Get the content of a specific cell from the specified row. This function
+-- works as a wrapper for the @'getCellContentMaybe'@ function, stripping it
+-- of the 'Maybe' monad.
+--
+-- If the @'getCellContentMaybe'@ returns a 'Nothing' it'll return a 'Text'
+-- saying that the /key couldn't be found/, otherwise it returns the value
+-- of the cell.
+getCellContent :: Text      -- ^ Argument: The 'Text' to look for in the row consisting of the 'Course' type.
+               -> Course    -- ^ Argument: The row to look in.
+               -> Text      -- ^ Return:   The result 'Text'.
+getCellContent k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "Key not found: " <> k) $ getCellContentMaybe k c
 
 
--- TODO: Fix the name of this function
--- | 
-getThingMaybe :: Text           -- ^ Argument: 
-              -> Course         -- ^ Argument: 
-              -> Maybe Text     -- ^ Return: 
-getThingMaybe k (_, c) = Map.lookup k c
-
-
-{- This method is not used in the application
--- TODO: Fix the namne of this function
--- | 
-getThingLang :: I18N    -- ^ Argument: 
-             -> Lang    -- ^ Argument: 
-             -> Text    -- ^ Argument: 
-             -> Course  -- ^ Argument: 
-             -> Text    -- ^ Return: 
-getThingLang db lang key c = fromMaybe (getThing key c) $ getThingMaybe (toLang db lang key) c
--}
+-- | Get the content of a specific cell form the specified row.
+--
+-- Returns 'Nothing' if the key isn't in the row, otherwise it returns
+-- the value of the cell.
+getCellContentMaybe :: Text           -- ^ Argument: The 'Text' to look for in the row.
+                    -> Course         -- ^ Argument: The row to look in.
+                    -> Maybe Text     -- ^ Return:   The 'Text' of the cell if it was found otherwise 'Nothing'.
+getCellContentMaybe k (_, c) = Map.lookup k c
 
 
 
