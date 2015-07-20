@@ -252,15 +252,21 @@ toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpa
 
 -- | Lookup a translation from any given map, containing 'y' types
 -- mapped to 'Lang' types. It only returns 'Just' values of the result.
-lookupLang :: Lang         -- ^ Argument: The 'Lang'uage to look for.
+lookupLang :: Lang      -- ^ Argument: The 'Lang'uage to look for.
         -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from.
         -> y            -- ^ Return:   The value of type 'y' found in the map.
 lookupLang i = fromJust . Map.lookup i
 
 
--- TODO: Check what this actually does.
--- TODO: Why is the T.words and T.unwords called directly after each other?
--- | 
+-- | This function removes all extra whitespaces between words in the input 'Text' and removes
+-- some unwanted text from the input 'Text'.
+--
+-- First it creates a list of 'Text's by splitting the input 'Text' on all newline characters,
+-- then it removes all extra whitespaces between the words in all rows in the created list,
+-- after this it merges all the rows into one 'Text' object separated by space characters.
+--
+-- It then replaces some unwanted text on the combined 'Text' object and removes some unwanted
+-- text completely (cells only containing ' ', ',', '-' or '!' characters).
 normalize :: Text   -- ^ Argument: The 'Text' to normalize.
           -> Text   -- ^ Result:   The normalized 'Text'.
 normalize =
@@ -597,6 +603,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 
 
 -- | Creating the javascript functions of the buttons in the HTML files.
+-- Select only a specific language, only a specific level etc.
 jsLogic :: JavascriptUrl url
 jsLogic = [julius|
 
@@ -730,7 +737,7 @@ findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "conflue
 -- separating the different 'Course' informations.
 --
 -- The first column in the main 'Header' row is empty (this is the column containing the category headers
--- when looking at the Wiki Table).
+-- when looking at the Wiki Table), therefore only the 'tail' of it is necessary.
 processTable :: Config      -- ^ Argument: Pointer to the /config.yaml/ file.
              -> Cursor      -- ^ Argument: XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
              -> Maybe Table -- ^ Return: The processed 'Maybe' 'Table'.
@@ -745,7 +752,7 @@ processTable cnf c = case cells of
 
 
 -- TODO: Is it possible to remove the 'Maybe' type from this?
--- | Create a 'Maybe' 'Header' type corresponding to the value of the raw XML-cell containging information
+-- | Create a 'Maybe' 'Header' type corresponding to the value of the raw XML-cell containing information
 -- about the header.
 getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the header.
           -> Maybe Header   -- ^ Return:   A 'Maybe' 'Header' type corresponding to the 'Cursor' value.
@@ -774,11 +781,14 @@ getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` 
 -- ===========================================================================
 
 
--- TODO: Understand what this does
--- | 
-toCategory :: Config            -- ^ Argument: 
-           -> Text              -- ^ Argument: 
-           -> Maybe Category    -- ^ Return:   
+-- | Checks if the given 'Text' is a 'Category' listed in the /config.yaml/ file. If it is, then it will
+-- return the name of the 'Category' otherwise it'll return an empty 'String'.
+--
+-- Because the Wiki Table column containing the categories also contains semester information or empty
+-- cells, the function has to exclude those cells before checking the category name.
+toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, for accessing the @categories@.
+           -> Text              -- ^ Argument: The cell value from the 'Table'.
+           -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'String'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
     guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
