@@ -302,8 +302,73 @@ i18n:
    "B. Ydinainesta täydentävät kurssit":
       en: "B. Core material complementing courses"
       se: "B. Kärnstudiernas fördjupade kurser"
-      
-# Fix for numbers showing up as warnings in when running program
+
+   "kevät, kenttä":
+      fi: "Kevät, kenttä"
+      en: "Spring, field"
+      se: "Vår, fält"
+   "syksy, kenttä":
+      fi: "Syksy, kenttä"
+      en: "Autumn, field"
+      se: "Höst, fält"
+   "kesä, kenttä":
+      fi: "Kesä, kenttä"
+      en: "Summer, field"
+      se: "Sommar, fält"
+
+   "tammikuu":
+      fi: "Tammikuu"
+      en: "January"
+      se: "Januari"
+   "helmikuu":
+      fi: "Helmikuu"
+      en: "February"
+      se: "Februari"
+   "maaliskuu":
+      fi: "Maaliskuu"
+      en: "Mars"
+      se: "Mars"
+   "huhtikuu":
+      fi: "Huhtikuu"
+      en: "April"
+      se: "April"
+   "toukokuu":
+      fi: "Toukokuu"
+      en: "May"
+      se: "Maj"
+   "kesäkuu":
+      fi: "Kesäkuu"
+      en: "June"
+      se: "Juni"
+   "heinäkuu":
+      fi: "Heinäkuu"
+      en: "July"
+      se: "Juli"
+   "elokuu":
+      fi: "Elokuu"
+      en: "August"
+      se: "Augusti"
+   "syyskuu":
+      fi: "Syyskuu"
+      en: "September"
+      se: "September"
+   "lokakuu":
+      fi: "Lokakuu"
+      en: "October"
+      se: "Oktober"
+   "marraskuu":
+      fi: "Marraskuu"
+      en: "November"
+      se: "November"
+   "joulukuu":
+      fi: "Joulukuu"
+      en: "December"
+      se: "December"
+
+
+#-------------------------------------------------------------------------------------
+# Fix to remove extra translation not found warning when running script.
+#-------------------------------------------------------------------------------------
    "1. ":
       en: "1. "
       se: "1. "
@@ -332,6 +397,21 @@ i18n:
       en: "9. "
       se: "9. "
 
+
+#-------------------------------------------------------------------------------------
+# Temporary hotfix to remove extra translation not found warning when running script.
+#-------------------------------------------------------------------------------------
+
+# This is probably a temporary line in the Wiki Table
+   "IV (elokuu 2015, Hyytiälässä?)":
+      en: "IV (August 2015, in Hyytiälä?)"
+      se: "IV (Augusti 2015, i Hyytiälä?)"
+
+# This is probably a spelling error
+   "I -II":
+      fi: "I-II"
+      en: "I-II"
+      se: "I-II"
 
 ######################################################################
 # The wiki table

@@ -4,6 +4,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 
+
+-- TODO: Check that all functions have 'Argument' and 'Return' information.
+-- TODO: Check that the usage of Code-blocks in comments is consistent.
+-- TODO: Check that the format is consistent in the comments
+
 ------------------------------------------------------------------------------
 -- | 
 -- Module         : Main
@@ -118,8 +123,12 @@ type Lang = Text
 
 
 -- | Properties for generating individual web page bodies.
-data PageConf = PageConf {  -- See Note [Config and PageConf] below
-              -- Faculty webpage properties
+--
+-- The 'PageConf' data type is used as a data holder for page information
+-- of the generated web pages. Where they are stored, what their titles are
+-- etc.
+data PageConf = PageConf {
+              -- Department web page properties
                 pageId          :: String
               , pageUrl         :: Map Lang Text
               , pageTitle       :: Map Lang Text
@@ -129,7 +138,12 @@ instance Yaml.FromJSON PageConf
 
 -- | Overall properties used by the module to generate HTML code from the
 -- source 'Table' found in the wiki pages.
-data Config   = Config {    -- See Note [Config and PageConf] below
+--
+-- The 'Config' data type is used to read the configuration properties from
+-- the /config.yaml/ file. It holds references to all of the different property
+-- fields and are accessed by their name in the config.yaml file.
+--
+data Config   = Config {
               -- File handling properties
                 rootDir         :: FilePath
               , cacheDir        :: FilePath
@@ -164,9 +178,9 @@ data Table        = Table UTCTime [Header] [Course]
 type Header       = Text
 
 
--- TODO: Change the name of this type to fit its purpose more
 -- | A row in source 'Table'. Each cell of the 'Table' row is mapped to a 'Header', and
--- each cell can have multiple 'Category's coupled to it (see 'Category').
+-- each cell can have multiple 'Category's coupled to it (see 'Category'). The 'ContentBlock'
+-- contains all the information read from the Wiki Table for the specified course.
 type Course       = ([Category], Map Header ContentBlock)
 
 
@@ -187,26 +201,13 @@ type ContentBlock = Text
 type I18N         = Map Text (Map Lang Text)
 
 
-{- Note [Config and PageConf]
-    
-    = Config
-    The 'Config' data type is used to read the configuration properties from
-    the /config.yaml/ file. It holds references to all of the different property
-    fields and are accessed by their name in the config.yaml file.
-    
-    = PageConf
-    The 'PageConf' data type is used as a data holder for page information
-    of the generated web pages. Where they are stored, what their titles are
-    etc.
--}
-
-
 -- ===========================================================================
 -- * Utility functions
 -- ===========================================================================
 
 
--- | Appends /.html/ to the end of the argument.
+-- | Appends /.html/ to the end of the argument. It's mainly used as a helper function
+-- when creating the cache files locally.
 toUrlPath :: Text   -- ^ Argument: The URL without /.html/
           -> Text   -- ^ Return:   The URL with /.html/ at the end
 toUrlPath  = (<> ".html")
@@ -324,10 +325,11 @@ weboodiLang lang
             | otherwise    = ""
 
 
--- TODO: Change the example to use the real base URL found in the /config.yaml/ file
 -- | Creates a hyperlink to use for accessing the selected 'Lang'uage version of WebOodi.
+-- This webpage is later used to access translations for the different course names, when altering the
+-- language on the course listing.
 --
--- The return value has the form of: /[base URL][1/2/6]"&Tunniste="[page ID]/.
+-- The return value has the form of: @https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=&Tunniste=[page ID]@.
 weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
             -> Lang     -- ^ Argument: Language to use on WebOodi.
             -> Text     -- ^ Argument: WebOodi page ID.
@@ -338,7 +340,8 @@ weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 -- TODO: What does this do?
 oodiVar :: MVar (Map (Lang, Text) Text)
 oodiVar = unsafePerformIO newEmptyMVar
-{-# NOINLINE oodiVar #-}
+{-# NOINLINE oodiVar #-}    -- If you are using the @unsafePerformIO@ function like this, it is
+                            -- recommended to use the @NOINLINE@ pragma on the function.
 
 
 -- | Read the course names from the /oodiNameFile/.
@@ -403,7 +406,8 @@ renderTable :: FilePath     -- ^ Argument: The root to where the HTML file shoul
             -> M ()         -- ^ Return:   ReaderT Config IO, from the generated HTML file.
 renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
-  where fp = toFilePath root $ lookupLang lang pageUrl
+  where
+    fp = toFilePath root $ lookupLang lang pageUrl
 
 
 -- ===========================================================================
@@ -419,8 +423,25 @@ tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ tableContent) cnf@Config{..} =
-    let i18nTranslationOf        = toLang i18n lang
-        translateCourseName code = unsafePerformIO $
+    let i18nTranslationOf            = toLang i18n lang
+        -- | Overriding the translations for some 'String's.
+        i18nTranslationOfPeriod cell
+                                | "?"      <- cell = cell
+                                | "I"      <- cell = cell
+                                | "I-II"   <- cell = cell
+                                | "I-III"  <- cell = cell
+                                | "I-IV"   <- cell = cell
+                                | "I, III" <- cell = cell
+                                | "II"     <- cell = cell
+                                | "II-III" <- cell = cell
+                                | "II-IV"  <- cell = cell
+                                | "II, IV" <- cell = cell
+                                | "III"    <- cell = cell
+                                | "III-IV" <- cell = cell
+                                | "IV"     <- cell = cell
+                                | ""       <- cell = cell
+                                | otherwise        = i18nTranslationOf cell
+        translateCourseName     code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
         -- course table --------------------------------------------------------
@@ -450,7 +471,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                         $if not (T.null op)
                                             \ (#{op} #{i18nTranslationOf "op"})
 
-                                <td.compact style="width:8%"  title="#{getCellContent colPeriod c}">#{getCellContent colPeriod c}
+                                <td.compact style="width:8%"  title="#{getCellContent colPeriod c}">#{i18nTranslationOfPeriod $ getCellContent colPeriod c}
                                 <td.compact style="width:8%"  title="#{getCellContent colRepeats c}">#{getCellContent colRepeats c}
                                 <td.compact style="width:12%;font-family:monospace" title="#{getCellContent colLang c}">
                                     $case T.words (getCellContent colLang c)
@@ -712,7 +733,7 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 -- ===========================================================================
 
 
--- | 
+-- | Creates a HTML Table from the cache HTML (in XML format).
 parseTable :: XML.Document  -- ^ Argument: A 'XML.Document' prepared with the 'cleanAndParse' function.
            -> M Table       -- ^ Return:   The parsed 'Table'.
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
@@ -752,7 +773,6 @@ processTable cnf c = case cells of
     cells = map ($/ anyElement) (c $// element "tr")
 
 
--- TODO: Is it possible to remove the 'Maybe' type from this?
 -- | Create a 'Maybe' 'Header' type corresponding to the value of the raw XML-cell containing information
 -- about the header.
 getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the header.
@@ -762,11 +782,11 @@ getHeader c = return . T.toLower . normalize $ T.unwords (c $// content)
 
 -- | A row is either a category or a course. The @['Category']@ is used as an
 -- accumulator.
-getRow :: Config                        -- ^ Argument: 
-       -> [Header]                      -- ^ Argument: 
-       -> [Category]                    -- ^ Argument: 
-       -> [Cursor]                      -- ^ Argument: 
-       -> ([Category], Maybe Course)    -- ^ Return:   
+getRow :: Config                        -- ^ Argument: Pointer to the 'Config' for use with the @toCategory@ function.
+       -> [Header]                      -- ^ Argument: List of the 'Table' 'Header's.
+       -> [Category]                    -- ^ Argument: A list of 'Category' objects associated with this 'Course'.
+       -> [Cursor]                      -- ^ Argument: The list of unprocessed rows in the 'Table'.
+       -> ([Category], Maybe Course)    -- ^ Return:   A single row, containing 'Category's and the 'Course' data (if any).
 getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
   where
     go []        _       = (cats, Nothing)
@@ -796,20 +816,28 @@ toCategory Config{..} t = do
     return $ normalize t
 
 
--- TODO: Understand what this code exactly does.
 -- | Accumulate a 'Category' to a list of 'Category's based on what categories
 -- cannot overlap.
-accumCategory :: Config         -- ^ Argument:
-              -> Category       -- ^ Argument: 
-              -> [Category]     -- ^ Argument: 
-              -> [Category]     -- ^ Return:   
-accumCategory Config{..} c cs = case L.findIndex (any (`T.isPrefixOf` c)) categories of
-    Nothing -> error $ "Unknown category: " ++ show c
-    Just i  -> L.deleteFirstsBy T.isPrefixOf cs (f i) ++ [c]
-  where f i = concat $ L.drop i categories
+--
+-- In the /config.yaml/ file the categories are listed in hierarchial order,
+-- making the once from the top being on the top if more than one category is
+-- found for that particular course.
+--
+-- If the 'Category' to check can be found in the list of @categories@, it will
+-- grab the index in the list of @categories@ for that 'Category' and generate
+-- the new list of 'Category's for the course.
+accumCategory :: Config         -- ^ Argument: Pointer to the 'Config' for access to the @categories@.
+              -> Category       -- ^ Argument: The current 'Category' to check.
+              -> [Category]     -- ^ Argument: The previous 'Category's for the course.
+              -> [Category]     -- ^ Return:   The list containing all 'Category's found for the course this far in the right order.
+accumCategory Config{..} cat cats = case L.findIndex (any (`T.isPrefixOf` cat)) categories of
+    Nothing -> error $ "Unknown category: " ++ show cat
+    Just i  -> L.deleteFirstsBy T.isPrefixOf cats (f i) ++ [cat]
+  where
+    f i = concat $ L.drop i categories
 
 
--- TODO: Add an alternative for 'kesä, kenttä'
+-- TODO: Add an alternative for 'kesä, kenttä', 'kevät, kenttä', 'syksy, kenttä'
 -- | Creates a row for the current 'Table'. The output will differ depending 
 -- on the content in the 'Config' data and the different arguments.
 --
@@ -833,14 +861,14 @@ toCourse Config{..} cats hs iscur xs =
             | x == "III" || x == "IV" || x == "III-IV" = Just "kevät"
             | x == "V"                                 = Just "kesä"
             | x == "I-IV"                              = Just "syksy, kevät"
-            | "kevät" `T.isInfixOf` x                  = Just "kevät"
-            | "syksy" `T.isInfixOf` x                  = Just "syksy"
-            | "kesä"  `T.isInfixOf` x                  = Just "kesä"
+            | "kevät"         `T.isInfixOf` x          = Just "kevät"
+            | "syksy"         `T.isInfixOf` x          = Just "syksy"
+            | "kesä"          `T.isInfixOf` x          = Just "kesä"
             | otherwise                                = Nothing
 
 
--- | Change the format of the @colLang@ column 'Header' in the source 'Table' to be
--- in correct.
+-- | Change the format of the @colLang@ column in the source 'Table' to be
+-- in the correct format.
 --
 --          * Replace different ways of writing languages to the correct 'Lang' format.
 --
