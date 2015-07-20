@@ -30,43 +30,44 @@
 
 module Main where
 
--- TODO: Remove the unused import?
--- TODO: Fix the order to follow more standard ones!
--- import Prelude
-import           Control.Monad
 import           Control.Applicative
-import           Control.Monad.Reader
 import           Control.Concurrent.MVar
-import           Codec.Text.IConv
+import           Control.Monad
+import           Control.Monad.Reader
+import           Codec.Text.IConv           (convert)
 import           Data.Char
 import           Data.Function              (on)
-import qualified Data.List          as L
+import qualified Data.List                                      as L
 import           Data.Map                   (Map)
-import qualified Data.Map           as Map
-import           Data.Maybe
+import qualified Data.Map                                       as Map
 import           Data.Monoid                ((<>))
+import           Data.Maybe
 import           Data.Text                  (Text)
-import qualified Data.Text          as T
-import qualified Data.Text.Lazy     as LT
-import qualified Data.Text.Lazy.IO  as LT
-import           Data.Text.Lazy.Encoding as LT
-import qualified Data.Yaml          as Yaml
+import qualified Data.Text                                      as T
+-- The 'Data.Text.Lazy' imports are needed when streaming large quantities of 'Text' data
+-- and you want to be efficient doing so.
+import qualified Data.Text.Lazy                                 as LT
+import qualified Data.Text.Lazy.IO                              as LT
+import qualified Data.Text.Lazy.Encoding                        as LT
+import           Data.Time
+-- Used to load the settings file.
+import qualified Data.Yaml                                      as Yaml
 import           Network.HTTP.Conduit       (simpleHttp)
 import           Text.Blaze.Html            (preEscapedToHtml)
 import           Text.Blaze.Renderer.Text   (renderMarkup)
 import           Text.Hamlet
 import           Text.Julius
-import           Text.Regex
-import qualified Text.XML           as XML
-import           Text.XML.Cursor
 import           Text.Markdown
-import           Debug.Trace
-import           Data.Time
-import           System.Exit (exitFailure)
-import           System.IO.Unsafe (unsafePerformIO) -- pure getCurrentTime
-import           System.Environment (getArgs)
+import           Text.Regex
+import qualified Text.XML                                       as XML
+import           Text.XML.Cursor
 import           System.Directory
+import           System.Environment         (getArgs)
+import           System.Exit                (exitFailure)
+import           System.IO.Unsafe           (unsafePerformIO) -- pure getCurrentTime
 import           GHC.Generics
+-- Used to print to the console.
+import           Debug.Trace
 
 
 -- TODO: hard-coded level switch for "Taso" in categories configuration option
@@ -159,7 +160,7 @@ data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
 
--- | Extension of 'Data.Text'. Used as Column 'Header's when reading the source 'Table'.
+-- | Extension of 'Text'. Used as Column 'Header's when reading the source 'Table'.
 type Header       = Text
 
 
@@ -169,7 +170,7 @@ type Header       = Text
 type Course       = ([Category], Map Header ContentBlock)
 
 
--- | Extension of 'Data.Text'. First column in source 'Table'. Each 'Course' can have
+-- | Extension of 'Text'. First column in source 'Table'. Each 'Course' can have
 -- several 'Category's (eg. @Pääaineopinnot@, @Perusopinnot@, @Pakolliset@, etc).
 type Category     = Text
 
@@ -334,7 +335,7 @@ weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
 weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
 
--- TODO: What does it do?
+-- TODO: What does this do?
 oodiVar :: MVar (Map (Lang, Text) Text)
 oodiVar = unsafePerformIO newEmptyMVar
 {-# NOINLINE oodiVar #-}
@@ -698,9 +699,9 @@ getData pageId = do
 -- HTML tags from the text (see 'regexes' for more information). It then parses an XML
 -- document from the HTML bodied 'Text' stream.
 --
--- Uses the 'XML.decodeHtmlEntities' setting to decode the 'Text' into XML.
-cleanAndParse :: LT.Text        -- ^ Argument: The raw 'Text' version of the cached wiki page.
-              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'Text'.
+-- Uses the 'XML.decodeHtmlEntities' setting to decode the 'LT.Text' into XML.
+cleanAndParse :: LT.Text        -- ^ Argument: The raw 'LT.Text' version of the cached wiki page.
+              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'LT.Text'.
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
   where
     parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
@@ -787,7 +788,7 @@ getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` 
 -- Because the Wiki Table column containing the categories also contains semester information or empty
 -- cells, the function has to exclude those cells before checking the category name.
 toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, for accessing the @categories@.
-           -> Text              -- ^ Argument: The cell value from the 'Table'.
+           -> Text           -- ^ Argument: The cell value from the 'Table'.
            -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'String'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
