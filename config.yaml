@@ -166,9 +166,9 @@ i18n:
       en: "Course name"
       se: "Kursnamn"
    "periodi":
-      fi: "Opetusperiodi"
-      en: "Teaching period"
-      se: "Undervisnings period"
+      fi: "Periodi"
+      en: "Period"
+      se: "Period"
    "Lukukausi":
       en: "Semester"
       se: "Termin"
@@ -176,7 +176,7 @@ i18n:
       en: "ECTS"
       se: "sp"
    "kotisivu":
-      fi: "Sivu"
+      fi: "Kotisivu"
       en: "Homepage"
       se: "Hemsida"
    "Taso":
@@ -184,8 +184,8 @@ i18n:
       se: "Level"
    "opetuskieli":
       fi: "Opetuskieli"
-      en: "Teaching language"
-      se: "Undervisningsspråk"
+      en: "Language"
+      se: "Språk"
    "väli(vuosia)":
       fi: "Toistuu"
       en: "Interval between courses (years)"
@@ -462,19 +462,19 @@ categoryLevel: 1
 columnHeaders:
    colCode:
        title:   "koodi"
-       width:   "5%"
+       width:   "15%"
    colCourseName:
        title:   "kurssin nimi"
-       width:   "60%"
-   colRepeats:
-       title:   "väli(vuosia)"
-       width:   "10%"
+       width:   "45%"
    colPeriod:
        title:   "periodi"
        width:   "10%"
+   colRepeats:
+       title:   "väli(vuosia)"
+       width:   "10%"
    colLang:
        title:   "opetuskieli"
-       width:   "5%"
+       width:   "10%"
    colWebsite:
        title:   "kotisivu"
        width:   "10%"
