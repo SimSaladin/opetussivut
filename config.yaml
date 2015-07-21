@@ -449,18 +449,36 @@ categories:
 # The default category level when nestling categories.
 categoryLevel: 1
 
+#-------------------------------------------------------------------------------
+# Column headers and specifications. The titles of the different column headers
+# must align with `toLower wikiTableColName`.
+#
+#       Try to get the widths to sum up to 100% in total.
+#       CSS syntax is allowed (%-sign not mandatory)
+#
+# The columns here don't have to come in the same order as presented in the
+# web page.
+#-------------------------------------------------------------------------------
+columnHeaders:
+   colCode:
+       title:   "koodi"
+       width:   "5%"
+   colCourseName:
+       title:   "kurssin nimi"
+       width:   "60%"
+   colRepeats:
+       title:   "väli(vuosia)"
+       width:   "10%"
+   colPeriod:
+       title:   "periodi"
+       width:   "10%"
+   colLang:
+       title:   "opetuskieli"
+       width:   "5%"
+   colWebsite:
+       title:   "kotisivu"
+       width:   "10%"
 
-
-# Column names in source table. these must align with `toLower real_col`
-colCode:       "koodi" 
-colLang:       "opetuskieli" 
-colCourseName: "kurssin nimi" 
-colRepeats:    "väli(vuosia)" 
-colPeriod:     "periodi" 
-colWebsite:    "kotisivu"
-
-# kevät, kesä, syksy -- NOT actually in the table but generated from colPeriod
-colLukukausi:  "Lukukausi"
 
 # HTML class of second column td when that course IS arranged this year
 classCur:      "highlight-green"
