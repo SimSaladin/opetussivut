@@ -120,7 +120,7 @@ clean:
 	@ tput sgr0		# Reset color
 
 .PHONY: clean-all
-clean-all:
+clean-all: clean
 	@ tput setaf 2  # Green text
 	@ echo "Cleaning all (build files too)"
 	@ #---------------------------------------------------
