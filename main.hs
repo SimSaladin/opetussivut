@@ -16,8 +16,7 @@
 -- TODO. function references:   @function@
 -- TODO: type references:       'Type'
 -- TODO: data references:       'Data'
-
--- TODO: Add months to the list of 'kevät', 'syksy', 'kesä' list (row ~1000)
+-- TODO: link references:       <www.link.com>
 
 --------------------------------------------------------------------------------
 -- |
@@ -34,14 +33,14 @@
 -- the information needed to either directly generate the list or lookup more
 -- information from different web sites.
 --
--- The application takes into consideration internationalization (I18N) for at
--- least Finnish, Swedish and English, more languages might be supported in the
--- future.
+-- The application takes into consideration internationalization ('I18N') for
+-- at least Finnish, Swedish and English, more languages might be supported in
+-- the future.
 --
 -- The user guide for operating the software can be found at
 -- <https://github.com/SimSaladin/opetussivut>
 --
--- See config.yaml for configuration options.
+-- See /config.yaml/ for configuration options.
 --
 --------------------------------------------------------------------------------
 
@@ -89,9 +88,9 @@ import           Debug.Trace
 
 -- TODO: hard-coded level switch for "Taso" in categories configuration option
 {- | Used to define the entry level when generating the hierarchial 'Category'
-    list
+    list.
 -}
-categoryLevelTaso :: Int    -- ^ Return: The hardcoded category level.
+categoryLevelTaso :: Int    -- ^ Return: The hardcoded 'Category' level.
 categoryLevelTaso = 1
 
 
@@ -102,7 +101,7 @@ categoryLevelTaso = 1
     or from the Wiki Table based on the command line arguments used.
 
     When the page data is fetched it starts the 'Table' generation by calling
-    the @parseTable@ function and later loops over the different 'Lang'uages
+    the @'parseTable'@ function and later loops over the different 'Lang'uages
     found in the /config.yaml/ page configuration section and renders a
     different page body for each of the languages.
 -}
@@ -110,7 +109,7 @@ main :: IO ()
 main = trace ("============================================================\n" ++
               " Running Application\n" ++
               "============================================================\n" ++
-              " * Decoding `config.yaml'")
+              " * Decoding config.yaml")
     Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
   where
     go = do
@@ -149,14 +148,14 @@ type Lang = Text
 {- | Properties for generating individual web page bodies.
 
     The 'PageConf' data type is used as a data holder for page information
-    of the generated web pages. Where they are stored, what their titles are
-    etc.
+    of the generated web pages. Where they are stored locally, what the page
+    title is etc.
 -}
 data PageConf = PageConf {
               -- Department web page properties
-                pageId          :: String
-              , pageUrl         :: Map Lang Text
-              , pageTitle       :: Map Lang Text
+                pageId          :: String         -- ^ Wiki Table ID
+              , pageUrl         :: Map Lang Text  -- ^ Local path
+              , pageTitle       :: Map Lang Text  -- ^ Local title
               } deriving Generic
 instance Yaml.FromJSON PageConf
 
@@ -166,31 +165,31 @@ instance Yaml.FromJSON PageConf
 
     The 'Config' data type is used to read the configuration properties from
     the /config.yaml/ file. It holds references to all of the different
-    property fields and are accessed by their name in the config.yaml file.
-    The fields are filled with a call to the @ask@ function.
+    property fields and are accessed by their name in the /config.yaml/ file.
+    The fields are filled with a call to the @'ask'@ function.
 -}
 data Config   = Config {
               -- File handling properties
-                rootDir         :: FilePath
-              , cacheDir        :: FilePath
-              , fetchUrl        :: String
-              , weboodiUrl      :: Text
-              , oodiNameFile    :: FilePath
+                rootDir         :: FilePath     -- ^ Local file path (root).
+              , cacheDir        :: FilePath     -- ^ Local cache path.
+              , fetchUrl        :: String       -- ^ URL to all Wiki Tables.
+              , weboodiUrl      :: Text         -- ^ URL to all WebOodi pages.
+              , oodiNameFile    :: FilePath     -- ^ File for course name translations.
               -- Page generation properties
-              , languages       :: [Lang]
-              , pages           :: [PageConf]
+              , languages       :: [Lang]       -- ^ All supported 'Lang'uages (@fi@, @en@, @se@, etc).
+              , pages           :: [PageConf]   -- ^ References to the different subject pages.
               -- Internationalization properties
-              , i18n            :: I18N
+              , i18n            :: I18N         -- ^ Database with translations.
               -- Wiki Table properties
-              , categories      :: [[Text]]
-              , colCode         :: Text
-              , colLang         :: Text
-              , colCourseName   :: Text
-              , colRepeats      :: Text
-              , colPeriod       :: Text
-              , colWebsite      :: Text
-              , colLukukausi    :: Text                 
-              , classCur        :: Text
+              , categories      :: [[Text]]     -- ^ List of lists of 'Category's (used to nestle the categories for the 'Course's).
+              , colCode         :: Text         -- ^ Column 'Header' for the course code.
+              , colLang         :: Text         -- ^ Column 'Header' for the course language.
+              , colCourseName   :: Text         -- ^ Column 'Header' for the course name.
+              , colRepeats      :: Text         -- ^ Column 'Header' for how frequent the course is thaught.
+              , colPeriod       :: Text         -- ^ Column 'Header' for when the course is thaught.
+              , colWebsite      :: Text         -- ^ Column 'Header' for the course homepage.
+              , colLukukausi    :: Text         -- ^ Column 'Header' for in which semester the course is thaught.
+              , classCur        :: Text         -- ^ Column 'Header' for showing if the course is available this year.
               } deriving Generic
 instance Yaml.FromJSON Config
 
@@ -202,7 +201,7 @@ data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
 
-{- | Extension of 'Text'. Used as Column 'Header's when reading the source
+{- | Extension of 'Text'. Used as column 'Header's when reading the source
     'Table'.
 -}
 type Header       = Text
@@ -211,7 +210,7 @@ type Header       = Text
 {- | A row in source 'Table'. Each cell of the 'Table' row is mapped to a
     'Header', and each cell can have multiple 'Category's coupled to it (see
     'Category'). The 'ContentBlock' contains all the information read from the
-    Wiki Table for the specified course.
+    Wiki Table for the specified 'Course'.
 -}
 type Course       = ([Category], Map Header ContentBlock)
 
@@ -223,7 +222,7 @@ type Course       = ([Category], Map Header ContentBlock)
 type Category     = Text
 
 
--- | @\<td\>@ HTML tag in source 'Table'.
+-- | @\<td\>@ HTML tag in source 'Table'. Used to fill the 'Course' row.
 type ContentBlock = Text
 
 
@@ -231,13 +230,13 @@ type ContentBlock = Text
 
     Map of a Finnish 'Text' phrase (fragment) to a list of 'Text's mapped to
     'Lang'uages. This way it is easy to translate a specific Finnish phrase to
-    one of the supported languages.
+    one of the supported 'Lang'uages.
 
     By first looking up the Finnish phrase from the internationalization
-    database, one gets a map of languages to translations (proper error
-    handling is needed to fallback when looking up a translation that does not
-    exist see @toLang@ for implementation). Then one will only have to lookup
-    up the desired language from the result.
+    ('I18N') database, one gets a 'Map' of languages to translations (proper
+    error handling is needed to fallback when looking up a translation that
+    does not exist see @'toLang'@ for implementation). Then one will only have
+    to lookup up the desired language from the result.
 
     > Map.lookup [Language] . Map.lookup [Finnish phrase] [I18N database]
 -}
@@ -253,22 +252,22 @@ type I18N         = Map Text (Map Lang Text)
     function when creating the body files locally, this way it's possible to
     generate links between the different web pages.
 -}
-toUrlPath :: Text   -- ^ Argument: The URL without /.html/
-          -> Text   -- ^ Return:   The URL with /.html/ at the end
+toUrlPath :: Text   -- ^ Argument: The URL without /.html/.
+          -> Text   -- ^ Return:   The URL with /.html/ at the end.
 toUrlPath  = (<> ".html")
 
 
-{- | Prepends the argument with the value of the /root/ parameter, and appends
+{- | Prepends the argument with the value of the @root@ parameter, and appends
     /.body/ to the end of the argument.
 
-    > root <> arg <> .body
+    > root [arg] .body
 
-    The PHP-engine used on physics.helsinki.fi utilizes a own .html file
-    extension (.body) to show HTML output in the center of the page.
+    The PHP-engine used on physics.helsinki.fi utilizes a own /.html/ file
+    extension (/.body/) to show HTML output in the center of the page.
 -}
 toFilePath :: FilePath  -- ^ Argument: The root directory.
            -> Text      -- ^ Argument: The file name.
-           -> FilePath  -- ^ Return:   @root/filename.body@
+           -> FilePath  -- ^ Return:   @root/filename.body@.
 toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 
@@ -285,7 +284,7 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
 
 
 {- | Fetch a translation from the 'I18N' database, found in /config.yaml/ under
-    the @I18N@ section.
+    the 'I18N' section.
 
     If the 'Text' that is to be translated can't be found in the given database
     it'll fall back on the given 'Text' (the Finnish version). If the selected
@@ -337,12 +336,12 @@ normalize =
 -- =============================================================================
 
 
-{- | Fetch the course name from the WebOodi URL. It looks for a HTML tag
-    containing the text /tauluotsikko\"?>/ to find the name of the course. It
-    then replaces some sub strings in the course name with Unicode characters.
+{- | Fetch the 'Course' name from the WebOodi URL. It looks for a HTML tag
+    containing the text @tauluotsikko\"?>@ to find the name of the 'Course'. It
+    then replaces some sub strings in the 'Course' name with Unicode characters.
 -}
-getOodiName :: Text         -- ^ Argument: 'Text' containing a raw version of the course name.
-            -> Maybe Text   -- ^ Return:   The Unicode formatted version of the course name.
+getOodiName :: Text         -- ^ Argument: 'Text' containing a raw version of the 'Course' name.
+            -> Maybe Text   -- ^ Return:   The Unicode formatted version of the 'Course' name.
 getOodiName =
     fmap (T.pack
           . sub "&aring;" "å"
@@ -362,6 +361,7 @@ getOodiName =
     sub a b i = subRegex (mkRegexWithOpts a False True) i b
 
 
+-- TODO: Move this into the 'webOodiLink' function
 {- | Helper method to select the correct 'Lang'uage when using WebOodi. The
     'Lang'uage is changed by switching a number in the URL:
 
@@ -372,7 +372,7 @@ getOodiName =
         * 6 : en (English version)
 
     If another 'Lang'uage than the provided ones is used, the function returns
-    an empty 'string' instead of a number.
+    an empty 'String' instead of a 'Num'ber.
 -}
 weboodiLang :: Lang     -- ^ Argument: The 'Lang' to use on WebOodi.
             -> Text     -- ^ Return:   A 'Text' string consisting of the number to switch to in the WebOodi URL.
@@ -382,6 +382,9 @@ weboodiLang lang
             | "en" <- lang = "6"
             | otherwise    = ""
 
+-- =======================================================================================
+-- TODO: Continue from here going through the comments looking for inconsistencies!!!
+-- =======================================================================================
 
 {- | Creates a hyperlink to use for accessing the selected 'Lang'uage version
     of WebOodi. This webpage is later used to access translations for the
