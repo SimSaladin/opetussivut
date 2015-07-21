@@ -11,13 +11,6 @@
 
 -- TODO: Add an easier way of changing the column widths of the table
 
--- TODO: file references:       /file.ext/
--- TODO: variable references:   @variable@
--- TODO. function references:   @function@
--- TODO: type references:       'Type'
--- TODO: data references:       'Data'
--- TODO: link references:       <www.link.com>
-
 --------------------------------------------------------------------------------
 -- |
 -- Module         : Main
@@ -382,16 +375,13 @@ weboodiLang lang
             | "en" <- lang = "6"
             | otherwise    = ""
 
--- =======================================================================================
--- TODO: Continue from here going through the comments looking for inconsistencies!!!
--- =======================================================================================
 
 {- | Creates a hyperlink to use for accessing the selected 'Lang'uage version
     of WebOodi. This webpage is later used to access translations for the
     different course names, when altering the language on the course listing.
 
     The return value has the form of:
-    @https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=&Tunniste=[page ID]@.
+    <https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=&Tunniste=[page ID]>.
 -}
 weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
             -> Lang     -- ^ Argument: Language to use on WebOodi.
@@ -424,10 +414,10 @@ oodiVar = unsafePerformIO newEmptyMVar
     Helper function for reading the @oodiNameFile@ to get translations for the
     course names. If the file can't be found it'll return an empty map.
 
-    If the file exists this function returns a map of translations for the
-    different course names, otherwise it'll return an empty map.
+    If the file exists this function returns a 'Map' of translations for the
+    different 'Course' names, otherwise it'll return an empty 'Map'.
 -}
-readOodiNames :: M (Map (Lang, Text) Text)  -- ^ Return: A map of all the WebOodi translations.
+readOodiNames :: M (Map (Lang, Text) Text)  -- ^ Return: A 'Map' of all the WebOodi translations.
 readOodiNames = do
     Config{..} <- ask
     exists <- liftIO $ doesFileExist oodiNameFile
@@ -437,7 +427,9 @@ readOodiNames = do
 
 
 -- TODO: Check what this method does, step by step.
--- | Get a translated name for a specific course, by looking it up from WebOodi.
+{- | Get a translated name for a specific 'Course', by looking it up from 
+    WebOodi.
+-}
 i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to lookup.
                        -> Text              -- ^ Argument: The WebOodi page ID.
                        -> M (Maybe Text)    -- ^ Return:   The translation if found.
@@ -493,17 +485,17 @@ renderTable root lang pc@PageConf{..} table =
 -- =============================================================================
 
 
-{- | How to render the data of the selected table into HTML using WebOodi to
+{- | How to render the data of the selected 'Table' into HTML using WebOodi to
     lookup course names in different languages.
 -}
 tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> PageConf       -- ^ Argument: More specific information of the current web page being created.
-          -> Table          -- ^ Argument: The source table to use when creating the web page.
-          -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
+          -> Table          -- ^ Argument: The source 'Table' to use when creating the web page.
+          -> Config         -- ^ Argument: 'Config'uration containing specific information about the source 'Table' and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ tableContent) cnf@Config{..} =
     let
-        -- | Helper function to get the I18N translation of the input.
+        -- | Helper function to get the 'I18N' translation of the input.
         i18nTranslationOf :: Text   -- ^ Argument: The 'Text' to translate.
                           -> Text   -- ^ Return:   Translation of the input.
         i18nTranslationOf            = toLang i18n lang
@@ -532,9 +524,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                 -- the cell content will be translated.
                                 | otherwise        = i18nTranslationOf cell
 
-        -- | Helper method to fetch a translation of the course name
+        -- | Helper method to fetch a translation of the 'Course' name
         translateCourseName :: Text         -- ^ Argument: WebOodi course code.
-                            -> Maybe Text   -- ^ Return:   Translation of the course name.
+                            -> Maybe Text   -- ^ Return:   Translation of the 'Course' name.
         translateCourseName     code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
@@ -545,9 +537,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         -- TODO: Add the function type description to this function as well!
         {- | Function for generating the nestled @\<div.courses\>@ HTML-tags.
 
-            If the maximum number of categories that can be nestled not is
-            reached it'll continue trying to add category titles until the
-            maximum is reached. After that the table row is created.
+            If the maximum number of @categories@ that can be nestled not is
+            reached it'll continue trying to add 'Category' titles until the
+            maximum is reached. After that the 'Table' row is created.
         -}
         courseTable n rows
             | n < length categories = withCat n rows $ courseTable (n + 1)
@@ -600,7 +592,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         
         -- TODO: Add the function type description to this function as well!      
         {- | Helper function to select the correct HTML-header tag for the
-            current category.
+            current 'Category'.
         -}
         catHeader n category =
             [shamlet|
@@ -636,9 +628,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         {- | Helper function to select if the HTML-header should be added or if
             the content @\<div.courses\>@ tags should nestled deeper.
             
-            Group the table rows into lists of table rows based on the Category
-            they belong to. Then loop over all cateogy based lists to generate
-            the different listings.
+            Group the 'Table' rows into lists of 'Table' rows based on the
+            'Category' they belong to. Then loop over all 'Category' based
+            lists to generate the different listings.
         -}
         withCat n rows f =
             [shamlet|
@@ -742,7 +734,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 
 
 {- | Creating the javascript functions of the buttons in the HTML files. Select
-    only a specific language, only a specific level etc.
+    only a specific 'Lang'uage, only a specific level etc.
 -}
 jsLogic :: JavascriptUrl url    -- ^ Return: A link to the different scripts.
 jsLogic = [julius|
@@ -810,7 +802,7 @@ jsLogic = [julius|
 
     Fetch a confluence doc (wiki page) by id. This function reads the wiki page
     with the given page ID, and parses it as an XML-document. The result is
-    cleaned with the @regexes@ function.
+    cleaned with the @'regexes'@ function.
 
     It returns the stripped HTML document in XML-format, if it can find the
     currently selected Wiki page, otherwise it returns 'Nothing'.
@@ -839,10 +831,11 @@ getData pageId = do
 
 
 {- | This function takes a whole wiki table in 'Text' form and removes some
-    standard HTML tags from the text (see 'regexes' for more information). It
-    then parses an XML document from the HTML bodied 'Text' stream.
+    standard HTML tags from the text (see @'regexes'@ for more information). It
+    then parses an XML document from the HTML body 'Text' stream.
 
-    Uses the 'XML.decodeHtmlEntities' setting to decode the 'LT.Text' into XML.
+    Uses the @'XML.decodeHtmlEntities'@ setting to decode the 'LT.Text' into
+    XML.
 -}
 cleanAndParse :: LT.Text        -- ^ Argument: The raw 'LT.Text' version of the cached wiki page.
               -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'LT.Text'.
@@ -857,16 +850,16 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 
 
 -- | Creates a HTML Table from the cache HTML (in XML format).
-parseTable :: XML.Document  -- ^ Argument: A 'XML.Document' prepared with the 'cleanAndParse' function.
+parseTable :: XML.Document  -- ^ Argument: A 'XML.Document' prepared with the @'cleanAndParse'@ function.
            -> M Table       -- ^ Return:   The parsed 'Table'.
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
 
 
 {- | Looks for all tables in the generated XML document, with XML-attribute
-    /class/ @confluenceTable@, maps the function 'processTable' to the result
+    /class/ @confluenceTable@, maps the function @'processTable'@ to the result
     list, and finally returns a list containing the discovered 'Table's.
 -}
-findTable :: Cursor         -- ^ Argument: XML document cursor.
+findTable :: Cursor         -- ^ Argument: XML document 'Cursor'.
           -> Config         -- ^ Argument: Pointer to the /config.yaml/ data.
           -> [Maybe Table]  -- ^ Return:   List of 'Maybe' 'Table's 
 findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
@@ -878,15 +871,15 @@ findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "conflue
     @confluenceTable@ class 'Cursor' and maps all child elements of the @tr@
     element to it.
 
-    The 'cells' variable contains all the rows of the table. The first row
-    contains some higher-level headers (eg. @Vastaava opettaja@), hence this
+    The @cells@ variable contains all the rows of the table. The first row
+    contains some higher-level 'Header's (eg. @Vastaava opettaja@), hence this
     row is ignored. The second row contains the main 'Header's of the different
     columns, and the rest of the rows are either 'Course' information or
     'Category's separating the different 'Course' informations.
 
     The first column in the main 'Header' row is empty (this is the column
-    containing the category headers when looking at the Wiki Table), therefore
-    only the 'tail' of it is necessary.
+    containing the 'Category' headers when looking at the Wiki Table),
+    therefore only the 'tail' of it is necessary.
 -}
 processTable :: Config      -- ^ Argument: Pointer to the /config.yaml/ file.
              -> Cursor      -- ^ Argument: XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
@@ -902,17 +895,17 @@ processTable cnf c = case cells of
 
 
 {- | Create a 'Maybe' 'Header' type corresponding to the value of the raw
-    XML-cell containing information about the header.
+    XML-cell containing information about the 'Header'.
 -}
-getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the header.
+getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the 'Header'.
           -> Maybe Header   -- ^ Return:   A 'Maybe' 'Header' type corresponding to the 'Cursor' value.
 getHeader c = return . T.toLower . normalize $ T.unwords (c $// content)
 
 
-{- | A row is either a category or a course. The @['Category']@ is used as an
-    accumulator.
+{- | A row is either a 'Category' or a 'Course'. The @['Category']@ is used as
+    an accumulator.
 -}
-getRow :: Config                        -- ^ Argument: Pointer to the 'Config' for use with the @toCategory@ function.
+getRow :: Config                        -- ^ Argument: Pointer to the 'Config' for use with the @'toCategory'@ function.
        -> [Header]                      -- ^ Argument: List of the 'Table' 'Header's.
        -> [Category]                    -- ^ Argument: A list of 'Category' objects associated with this 'Course'.
        -> [Cursor]                      -- ^ Argument: The list of unprocessed rows in the 'Table'.
@@ -934,31 +927,31 @@ getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` 
 
 {- | Checks if the given 'Text' is a 'Category' listed in the /config.yaml/
     file. If it is, then it will return the name of the 'Category' otherwise
-    it'll return an empty 'String'.
+    it'll return an empty 'Text'.
 
     Because the Wiki Table column containing the categories also contains
     semester information or empty cells, the function has to exclude those
-    cells before checking the category name.
+    cells before checking the 'Category' name.
 -}
 toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, for accessing the @categories@.
            -> Text              -- ^ Argument: The cell value from the 'Table'.
-           -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'String'.
+           -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'Text'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
     guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
     return $ normalize t
 
 
-{- | Accumulate a 'Category' to a list of 'Category's based on what categories
+{- | Accumulate a 'Category' to a list of 'Category's based on what @categories@
     cannot overlap.
 
-    In the /config.yaml/ file the categories are listed in hierarchial order,
-    making the once from the top being on the top if more than one category is
-    found for that particular course.
+    In the /config.yaml/ file the @categories@ are listed in hierarchial order,
+    making the once from the top being on the top if more than one 'Category' is
+    found for that particular 'Course'.
 
     If the 'Category' to check can be found in the list of @categories@, it will
     grab the index in the list of @categories@ for that 'Category' and generate
-    the new list of 'Category's for the course.
+    the new list of 'Category's for the 'Course'.
 -}
 accumCategory :: Config         -- ^ Argument: Pointer to the 'Config' for access to the @categories@.
               -> Category       -- ^ Argument: The current 'Category' to check.
@@ -975,7 +968,7 @@ accumCategory Config{..} cat cats = case L.findIndex (any (`T.isPrefixOf` cat)) 
     the content in the 'Config' data and the different arguments.
 
     This function will return the finished row, containing the separating
-    'Category's and the correct course information from the source 'Table'.
+    'Category's and the correct 'Course' information from the source 'Table'.
 -}
 toCourse :: Config          -- ^ Argument: The 'Config' to lookup page configuration data from.
          -> [Category]      -- ^ Argument: A list of 'Category's to pass on to the finished row.
@@ -999,7 +992,7 @@ toCourse Config{..} cats hs iscur xs =
         | "toukokuu"  `T.isInfixOf` x                                    = Just "kevät"
         | "kesäkuu"   `T.isInfixOf` x                                    = Just "kesä"
         | "heinäkuu"  `T.isInfixOf` x                                    = Just "kesä"
-        | "elokuu"    `T.isInfixOf` x                                    = Just "kesä"
+        | "elokuu"    `T.isInfixOf` x                                    = Just "kesä, syksy"
         | "syyskuu"   `T.isInfixOf` x                                    = Just "syksy"
         | "lokakuu"   `T.isInfixOf` x                                    = Just "syksy"
         | "marraskuu" `T.isInfixOf` x                                    = Just "syksy"
@@ -1030,9 +1023,9 @@ doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "e
        . T.replace "," " " . T.replace "." " " . T.replace "/" " " . T.toLower
 
 
-{- | Checks the column @/toistuu/@ from the source 'Table'. If there's anything
-    but numericals or non-alpha signs, it'll return a 'string' consisting of
-    the '-' sign. Else it returns the value of the cell.
+{- | Checks the column @toistuu@ from the source 'Table'. If there's anything
+    but numericals or non-alpha characters, it'll return a 'Text' consisting
+    of the '-' character. Else it returns the value of the cell.
 -}
 doRepeats :: Text   -- ^ Argument: The 'Text' in the cell of the column.
           -> Text   -- ^ Return:   The value of 'Text' argument if there isn't any alpha characters in the cell.
@@ -1041,15 +1034,15 @@ doRepeats x | T.any isLetter x = "-"
 
 
 {- | The 'Course' in this case is a row in the 'Table'. This function compares
-    two rows and checks if the values are 'Category's, it will compare the
-    'Text's of them. It will return true if both of the applied 'Course'
-    arguments have the same text.
+    two rows and checks if the values are found in the @categories@ list.
+    It will compare the 'Text's of them and returns 'True' if both of the
+    applied 'Course' arguments have the same text.
 -}
 catGroup :: Config      -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
-         -> Int         -- ^ Argument: Category at level @n@ in /config.yaml/.
+         -> Int         -- ^ Argument: 'Category' at level @n@ in /config.yaml/.
          -> Course      -- ^ Argument: First 'Table' row to compare.
          -> Course      -- ^ Argument: Second 'Table' row to compare.
-         -> Bool        -- ^ Return:   True if the two rows have the same 'Category' 'Text'.
+         -> Bool        -- ^ Return:   'True' if the two rows have the same 'Category' 'Text'.
 catGroup cnf n = (==) `on` catAt cnf n
 
 
@@ -1057,7 +1050,7 @@ catGroup cnf n = (==) `on` catAt cnf n
     @categories@ at level @n@ in /config.yaml/.
 -}
 catAt :: Config         -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
-      -> Int            -- ^ Argument: Category at level @n@ in /config.yaml/.
+      -> Int            -- ^ Argument: 'Category' at level @n@ in /config.yaml/.
       -> Course         -- ^ Argument: A 'Table' row consisting of only a 'Category' 'Text'.
       -> Maybe Text     -- ^ Return:   The first found value matching @categories@ at level @n@.
 catAt Config{..} n (cats, _) =
