@@ -164,14 +164,8 @@ data Config   = Config {
               -- Wiki Table properties
               , categoryLevel   :: Int
               , categories      :: [[Text]]     -- ^ List of lists of 'Category's (used to nestle the categories for the 'Course's).
-              , colCode         :: Text         -- ^ Column 'Header' for the course code.
-              , colLang         :: Text         -- ^ Column 'Header' for the course language.
-              , colCourseName   :: Text         -- ^ Column 'Header' for the course name.
-              , colRepeats      :: Text         -- ^ Column 'Header' for how frequent the course is thaught.
-              , colPeriod       :: Text         -- ^ Column 'Header' for when the course is thaught.
-              , colWebsite      :: Text         -- ^ Column 'Header' for the course homepage.
-              , colLukukausi    :: Text         -- ^ Column 'Header' for in which semester the course is thaught.
-              , classCur        :: Text         -- ^ Column 'Header' for showing if the course is available this year.
+              , columnHeaders   :: ColumnHeader -- ^ The @columnHeaders@ section of the /config.yaml/ file.
+              , classCur        :: Text         -- ^ HTML class for showing if the course is available this year.
               } deriving Generic
 instance Yaml.FromJSON Config
 
@@ -224,6 +218,17 @@ type ContentBlock = Text
 -}
 type I18N         = Map Text (Map Lang Text)
 
+
+{- | ColumnHeader database.
+
+    The different properties found in the @columnHeaders@ section of the
+    /config.yaml/ file. All the functions for this property is very similar to
+    the functions of the 'I18N' type.
+
+    When adding more column headers remember to check out the helper functions
+    inside the function body of @'tableBody'@.
+-}
+type ColumnHeader = Map Text (Map Text Text)
 
 -- =============================================================================
 -- * Utility functions
@@ -282,6 +287,39 @@ toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpa
   where
     fallback | "fi" <- lang = key
              | otherwise    = trace ("!!! Warning: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
+
+
+{- | Access the 'ColumnHeader' information with name of the column and with a
+    key to the information desired.
+
+    Returns the value of the desired column information. If the column name
+    doesn't exist it'll show a warning in the output and an empty 'Text' is
+    returned instead.
+-}
+columnInfo :: ColumnHeader  -- ^ Argument: The 'ColumnHeader' to look for information in.
+           -> Text          -- ^ Argument: The column information to look for (see /config.yaml/ for alternatives).
+           -> Text          -- ^ Argument: The column name to look for.
+           -> Text          -- ^ Return:   The value of the column information.
+columnInfo db key column = maybe (trace ("!!! Warning: no column in db with name `" ++ T.unpack column ++ "'") column)
+                                 (fromMaybe "" . Map.lookup key) (Map.lookup column db)
+
+
+{- | Wrapper function to access the @title@ information of the @column@. Calls
+    the @'columnInfo'@ function with \"title\" as the desired information.
+-}
+columnTitle :: ColumnHeader -- ^ Argument: The 'ColumnHeader' to look for information in.
+            -> Text         -- ^ Argument: The column name to look for.
+            -> Text         -- ^ Return:   The value of the column information with key \"title\".
+columnTitle db column = columnInfo db "title" column
+
+
+{- | Wrapper function to access the @width@ information of the @column@. Calls
+    the @'columnInfo'@ functio with \"width\" as the desired information.
+-}
+columnWidth :: ColumnHeader -- ^ Argument: The 'ColumnHeader' to look for information in.
+            -> Text         -- ^ Argument: The column name to look for.
+            -> Text         -- ^ Return:   The value of the column information with key \"width\".
+columnWidth db column = columnInfo db "width" column
 
 
 {- | Lookup a translation from any given map, containing 'y' types mapped to
@@ -519,6 +557,24 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         translateCourseName     code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
+
+        -- Helper functions to access the different column header properties
+        colTitle          col = columnTitle columnHeaders col
+        colCodeTitle          = colTitle "colCode"
+        colCourseNameTitle    = colTitle "colCourseName"
+        colPeriodTitle        = colTitle "colPeriod"
+        colRepeatsTitle       = colTitle "colRepeats"
+        colLangTitle          = colTitle "colLang"
+        colWebsiteTitle       = colTitle "colWebsite"
+
+        colWidth          col = columnWidth columnHeaders col
+        colCodeWidth          = colWidth "colCode"
+        colCourseNameWidth    = colWidth "colCourseName"
+        colPeriodWidth        = colWidth "colPeriod"
+        colRepeatsWidth       = colWidth "colRepeats"
+        colLangWidth          = colWidth "colLang"
+        colWebsiteWidth       = colWidth "colWebsite"
+
         ------------------------------------------------------------------------
         -- course table --------------------------------------------------------
         ------------------------------------------------------------------------
@@ -537,29 +593,29 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                     <table>
                         $forall c <- rows
                             <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevel c}"
-                                data-kieli="#{getCellContent colLang c}"
-                                data-lukukausi="#{getCellContent colLukukausi c}"
+                                data-kieli="#{getCellContent colLangTitle c}"
+                                data-lukukausi="#{getCellContent "lukukausi" c}"
                                 data-pidetaan="#{getCellContent "pidetään" c}">
 
-                                <td style="width:10%">
-                                    <a href="#{weboodiLink weboodiUrl lang $ getCellContent colCode c}">
-                                        <b>#{getCellContent colCode c}
+                                <td style="width:#{colCodeWidth}">
+                                    <a href="#{weboodiLink weboodiUrl lang $ getCellContent colCodeTitle c}">
+                                        <b>#{getCellContent colCodeTitle c}
 
-                                <td style="width:57%">
+                                <td style="width:#{colCourseNameWidth}">
 
-                                    $maybe name <- translateCourseName (getCellContent colCode c)
+                                    $maybe name <- translateCourseName (getCellContent colCodeTitle c)
                                         #{name}
                                     $nothing
-                                        #{getCellContent colCourseName c}
+                                        #{getCellContent colCourseNameTitle c}
 
                                     $with op <- getCellContent "op" c
                                         $if not (T.null op)
                                             \ (#{op} #{i18nTranslationOf "op"})
 
-                                <td.compact style="width:8%"  title="#{getCellContent colPeriod c}">#{i18nTranslationOfPeriod $ getCellContent colPeriod c}
-                                <td.compact style="width:8%"  title="#{getCellContent colRepeats c}">#{getCellContent colRepeats c}
-                                <td.compact style="width:12%;font-family:monospace" title="#{getCellContent colLang c}">
-                                    $case T.words (getCellContent colLang c)
+                                <td.compact style="width:#{colPeriodWidth}"  title="#{getCellContent colPeriodTitle c}">#{i18nTranslationOfPeriod $ getCellContent colPeriodTitle c}
+                                <td.compact style="width:#{colRepeatsWidth}" title="#{getCellContent colRepeatsTitle c}">#{getCellContent colRepeatsTitle c}
+                                <td.compact style="width:#{colLangWidth};font-family:monospace" title="#{getCellContent colLangTitle c}">
+                                    $case T.words (getCellContent colLangTitle c)
                                         $of []
                                         $of rows
                                             <b>#{head rows}
@@ -567,11 +623,11 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                             $else
                                                 (#{T.intercalate ", " $ tail rows})
 
-                                <td.compact style="width:5%" title="#{colWebsite}">
-                                    $maybe p <- getCellContentMaybe colWebsite c
+                                <td.compact style="width:#{colWebsiteWidth}" title="#{colWebsiteTitle}">
+                                    $maybe p <- getCellContentMaybe colWebsiteTitle c
                                         $if not (T.null p)
                                             \ #
-                                            <a href="#{p}">#{i18nTranslationOf colWebsite}
+                                            <a href="#{p}">#{i18nTranslationOf colWebsiteTitle}
                 |]
 
 
@@ -680,12 +736,12 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
             <div.headers>
                 <table style="width:100%">
                     <tr>
-                        <td style="width:10%">#{i18nTranslationOf colCode}
-                        <td style="width:57%">#{i18nTranslationOf colCourseName}
-                        <td style="width:8%" >#{i18nTranslationOf colPeriod}
-                        <td style="width:8%" >#{i18nTranslationOf colRepeats}
-                        <td style="width:12%" >#{i18nTranslationOf colLang}
-                        <td style="width:5%">#{i18nTranslationOf colWebsite}
+                        <td style="width:#{colCodeWidth}">#{i18nTranslationOf colCodeTitle}
+                        <td style="width:#{colCourseNameWidth}">#{i18nTranslationOf colCourseNameTitle}
+                        <td style="width:#{colPeriodWidth}" >#{i18nTranslationOf colPeriodTitle}
+                        <td style="width:#{colRepeatsWidth}" >#{i18nTranslationOf colRepeatsTitle}
+                        <td style="width:#{colLangWidth}" >#{i18nTranslationOf colLangTitle}
+                        <td style="width:#{colWebsiteWidth}">#{i18nTranslationOf colWebsiteTitle}
 
             #{courseTable 0 $ tail tableContent}
 
@@ -966,13 +1022,13 @@ toCourse :: Config          -- ^ Argument: The 'Config' to lookup page configura
          -> [Text]          -- ^ Argument: Used to fill the columns of the row with values from the source 'Table'.
          -> Course          -- ^ Return:   The finished row.
 toCourse Config{..} cats hs iscur xs =
-    (cats, Map.adjust doLang colLang $
-           Map.adjust doRepeats colRepeats $
+    (cats, Map.adjust doLang (columnTitle columnHeaders "colLang") $
+           Map.adjust doRepeats (columnTitle columnHeaders "colRepeats") $
            Map.insert "pidetään" (if iscur then "this-year" else "next-year") $
-           Map.insert colLukukausi lukukausi vals)
+           Map.insert "lukukausi" lukukausi vals)
   where
     vals      = Map.fromList $ zip hs $ map normalize xs
-    lukukausi = fromMaybe "syksy, kevät" $ Map.lookup colPeriod vals >>= toLukukausi
+    lukukausi = fromMaybe "syksy, kevät" $ Map.lookup (columnTitle columnHeaders "colPeriod") vals >>= toLukukausi
     toLukukausi x
         | "tammikuu"  `T.isInfixOf` x                                    = Just "kevät"
         | "helmikuu"  `T.isInfixOf` x                                    = Just "kevät"
