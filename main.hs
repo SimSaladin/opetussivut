@@ -4,9 +4,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-
--- TODO: Add an easier way of changing the column widths of the table
-
 --------------------------------------------------------------------------------
 -- |
 -- Module         : Main
