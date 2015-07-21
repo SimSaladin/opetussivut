@@ -8,6 +8,7 @@
 -- TODO: Check that all functions have 'Argument' and 'Return' information.
 -- TODO: Check that the usage of Code-blocks in comments is consistent.
 -- TODO: Check that the format is consistent in the comments
+-- TODO: Check that the 'where' syntax is consistent
 
 ------------------------------------------------------------------------------
 -- | 
@@ -76,7 +77,8 @@ import           Debug.Trace
 
 
 -- TODO: hard-coded level switch for "Taso" in categories configuration option
-categoryLevelTaso :: Int
+-- | Used to define the entry level when generating the hierarchial 'Category' list
+categoryLevelTaso :: Int    -- ^ Return: The hardcoded category level.
 categoryLevelTaso = 1
 
 
@@ -149,7 +151,7 @@ instance Yaml.FromJSON PageConf
 -- The 'Config' data type is used to read the configuration properties from
 -- the /config.yaml/ file. It holds references to all of the different property
 -- fields and are accessed by their name in the config.yaml file.
---
+-- The fields are filled with a call to the @ask@ function.
 data Config   = Config {
               -- File handling properties
                 rootDir         :: FilePath
@@ -176,7 +178,8 @@ data Config   = Config {
 instance Yaml.FromJSON Config
 
 
--- | Source 'Table'. Consists of a time stamp, a list of 'Header' objects and a list of 'Course' objects.
+-- | Source 'Table'. Consists of a time stamp, a list of 'Header's and a list of 'Course's
+-- (the 'Course' objects are used as rows in the 'Table').
 data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
@@ -205,6 +208,13 @@ type ContentBlock = Text
 -- Map of a Finnish 'Text' phrase (fragment) to a list of 'Text's mapped to 'Lang'uages.
 -- This way it is easy to translate a specific Finnish phrase to one of the supported
 -- languages.
+--
+-- By first looking up the Finnish phrase from the internationalization database, one
+-- gets a map of languages to translations (proper error handling is needed to fallback
+-- when looking up a translation that does not exist see @toLang@ for implementation).
+-- Then one will only have to lookup up the desired language from the result.
+--
+-- > Map.lookup [Language] . Map.lookup [Finnish phrase] [I18N database]
 type I18N         = Map Text (Map Lang Text)
 
 
@@ -214,7 +224,8 @@ type I18N         = Map Text (Map Lang Text)
 
 
 -- | Appends /.html/ to the end of the argument. It's mainly used as a helper function
--- when creating the cache files locally.
+-- when creating the body files locally, this way it's possible to generate links
+-- between the different web pages.
 toUrlPath :: Text   -- ^ Argument: The URL without /.html/
           -> Text   -- ^ Return:   The URL with /.html/ at the end
 toUrlPath  = (<> ".html")
@@ -237,16 +248,18 @@ toFilePath root = (root <>) . T.unpack . (<> ".body")
 --
 -- WebOodi's HTML is just horrible (imo it's not even HTML), so we use
 -- another regex to parse it (before the XML parser is used).
-regexes :: [String -> String]
+regexes :: [String -> String]   -- ^ Return: A list of functions (regular expressions) for removing HTML-tags
 regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
-    where rm s i = subRegex (mkRegexWithOpts s False True) i ""
+  where
+    rm s i = subRegex (mkRegexWithOpts s False True) i ""
 
 
--- | Fetch a translation from the 'I18N' database, /db/, found in /config.yaml/.
+-- | Fetch a translation from the 'I18N' database, found in /config.yaml/ under
+-- the @I18N@ section.
 --
--- If the 'Text' that is to be translated can't be found in the given database.
--- It'll fall back on the given 'Text' (the Finnish version). If the selected
+-- If the 'Text' that is to be translated can't be found in the given database
+-- it'll fall back on the given 'Text' (the Finnish version). If the selected
 -- 'Lang'uage in this case is not Finnish it will also warn the user that no
 -- translation for the selected 'Text' can be found.
 toLang :: I18N  -- ^ Argument: The 'I18N' database to fetch translations from.
@@ -255,8 +268,9 @@ toLang :: I18N  -- ^ Argument: The 'I18N' database to fetch translations from.
        -> Text  -- ^ Return:   The translated 'Text' or the 'Text' to translate if no translation was found.
 toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
-  where fallback | "fi" <- lang = key
-                 | otherwise    = trace ("!!! Warning: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
+  where
+    fallback | "fi" <- lang = key
+             | otherwise    = trace ("!!! Warning: no i18n for key `" ++ T.unpack key ++ "' with lang `" ++ T.unpack lang ++ "'") key
 
 
 -- | Lookup a translation from any given map, containing 'y' types
@@ -344,18 +358,28 @@ weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
 weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
 
--- TODO: What does this do?
-oodiVar :: MVar (Map (Lang, Text) Text)
+-- TODO: What does this do exactly?
+-- | This is a helper function that gives a 'MVar' variable with a @('Lang', [WebOodi code])@ mapped to a course
+-- name (for that specific 'Lang'uage).
+--
+-- This function is used when accessing the /oodi.names/ file for course name translations. The /oodi.names/ file
+-- is generated from accessing the WebOodi web page during the fetching process.
+--
+-- Initially the 'MVar' is empty.
+oodiVar :: MVar (Map (Lang, Text) Text)     -- ^ Return: A 'MVar' containing a 'Map' between a @('Lang', [WebOodi code])@ and a @[Course name]@.
 oodiVar = unsafePerformIO newEmptyMVar
 {-# NOINLINE oodiVar #-}    -- If you are using the @unsafePerformIO@ function like this, it is
                             -- recommended to use the @NOINLINE@ pragma on the function.
 
 
--- | Read the course names from the /oodiNameFile/.
+-- | Read the course names from the @oodiNameFile@.
+--
+-- Helper function for reading the @oodiNameFile@ to get translations for the course
+-- names. If the file can't be found it'll return an empty map.
 --
 -- If the file exists this function returns a map of translations for the different
 -- course names, otherwise it'll return an empty map.
-readOodiNames :: M (Map (Lang, Text) Text)
+readOodiNames :: M (Map (Lang, Text) Text)  -- ^ Return: A map of all the WebOodi translations.
 readOodiNames = do
     Config{..} <- ask
     exists <- liftIO $ doesFileExist oodiNameFile
@@ -430,8 +454,16 @@ tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
           -> Config         -- ^ Argument: Configuration containing specific information about the source table and translation data.
           -> Html           -- ^ Return:   The generated HTML code.
 tableBody lang page (Table time _ tableContent) cnf@Config{..} =
-    let i18nTranslationOf            = toLang i18n lang
-        -- | Overriding the translations for some 'String's.
+    let
+        -- | Helper function to get the I18N translation of the current @argument@.
+        i18nTranslationOf :: Text   -- ^ Argument: The 'Text' to translate.
+                          -> Text   -- ^ Return:   Translation of the @argument@.
+        i18nTranslationOf            = toLang i18n lang
+
+        -- | Overriding the translations for some 'String's, for usage with the
+        -- /periodi/ column of the 'Table'.
+        i18nTranslationOfPeriod :: Text     -- ^ Argument: The cell content to be translated.
+                                -> Text     -- ^ Return:   The translation.
         i18nTranslationOfPeriod cell
                                 | "?"      <- cell = cell
                                 | "I"      <- cell = cell
@@ -447,11 +479,28 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                 | "III-IV" <- cell = cell
                                 | "IV"     <- cell = cell
                                 | ""       <- cell = cell
+                                -- If non of the above \"exceptions\" is found in the listing,
+                                -- the cell content will be translated.
                                 | otherwise        = i18nTranslationOf cell
+
+        -- | Helper method to translate the course name by checking the
+        -- @oodiNameFile@.
+        translateCourseName :: Text         -- ^ Argument: WebOodi course code.
+                            -> Maybe Text   -- ^ Return:   Translation of the course name found at @code@.
         translateCourseName     code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
+        ------------------------------------------------------------------------
         -- course table --------------------------------------------------------
+        ------------------------------------------------------------------------
+
+        -- TODO: Add the function type description to this function as well!
+
+        -- | Function for generating the nestled @\<div.courses\>@ HTML-tags.
+        --
+        -- If the maximum number of categories that can be nestled not is reached
+        -- it'll continue trying to add category titles until the maximum is
+        -- reached. After that the table row is created.
         courseTable n rows
             | n < length categories = withCat n rows $ courseTable (n + 1)
             | otherwise             =
@@ -497,7 +546,13 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 |]
 
 
+        -- TODO: Add the function type description to this function as well!
+
+        ------------------------------------------------------------------------
         -- if it begins with a number, apply appropriate header ----------------
+        ------------------------------------------------------------------------
+        -- | Helper function to select the correct HTML-header tag for the current
+        -- category.
         catHeader n category =
             [shamlet|
                 $case n
@@ -526,8 +581,12 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
           where
             translation = i18nTranslationOf category
 
+        ------------------------------------------------------------------------
         -- course category div -------------------------------------------------
-        {-
+        ------------------------------------------------------------------------
+        {- | Helper function to select if the HTML-header should be added or
+            if the content @\<div.courses\>@ tags should nestled deeper.
+            
             Group the table rows into lists of table rows based on the Category
             they belong to. Then loop over all cateogy based lists to generate
             the different listings.
@@ -541,7 +600,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                         #{f groupedRows}
             |]
 
+        ------------------------------------------------------------------------
         -- put everything together ---------------------------------------------
+        ------------------------------------------------------------------------
     in [shamlet|
         \<!-- title: #{lookupLang lang $ pageTitle page} -->
         \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookupLang "fi" $ pageUrl page} -->
@@ -633,7 +694,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 
 -- | Creating the javascript functions of the buttons in the HTML files.
 -- Select only a specific language, only a specific level etc.
-jsLogic :: JavascriptUrl url
+jsLogic :: JavascriptUrl url    -- ^ Return: A link to the different scripts.
 jsLogic = [julius|
 
     fs = { };
@@ -694,12 +755,12 @@ jsLogic = [julius|
 -- ===========================================================================
 
 
--- | The main entry of the application. This function handles the command line
--- arguments for caching and fetching the wiki tables.
+-- | This function handles the command line arguments for caching and fetching
+-- the wiki tables.
 --
 -- Fetch a confluence doc (wiki page) by id. This function reads the wiki
 -- page with the given page ID, and parses it as an XML-document. The result
--- is cleaned with the 'regexes' function.
+-- is cleaned with the @regexes@ function.
 getData :: String                   -- ^ Argument: The page ID.
         -> M (Maybe XML.Document)   -- ^ Return:   The cleaned XML-document, if found any.
 getData pageId = do
@@ -815,7 +876,7 @@ getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` 
 -- Because the Wiki Table column containing the categories also contains semester information or empty
 -- cells, the function has to exclude those cells before checking the category name.
 toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, for accessing the @categories@.
-           -> Text           -- ^ Argument: The cell value from the 'Table'.
+           -> Text              -- ^ Argument: The cell value from the 'Table'.
            -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'String'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
@@ -844,7 +905,6 @@ accumCategory Config{..} cat cats = case L.findIndex (any (`T.isPrefixOf` cat)) 
     f i = concat $ L.drop i categories
 
 
--- TODO: Add an alternative for 'kesä, kenttä', 'kevät, kenttä', 'syksy, kenttä'
 -- | Creates a row for the current 'Table'. The output will differ depending 
 -- on the content in the 'Config' data and the different arguments.
 --
