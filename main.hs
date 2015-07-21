@@ -5,10 +5,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 
--- TODO: Check that the usage of Code-blocks in comments is consistent.
--- TODO: Check that the format is consistent in the comments
--- TODO: Remove whitespaces from the end of the lines
-
 -- TODO: Add an easier way of changing the column widths of the table
 
 --------------------------------------------------------------------------------
@@ -19,7 +15,7 @@
 -- Maintainer     : Samuli Thomasson <samuli.thomasson@paivola.fi>
 -- Stability      : experimental
 -- Portability    : non-portable
--- 
+--
 -- This application is used to automatically generate web page bodies listing
 -- the available courses at the department of physics at the University of
 -- Helsinki. The data is parsed from a confluence Wiki Source Table containing
@@ -108,14 +104,14 @@ main = trace ("============================================================\n" +
     go = do
         Config{..} <- ask
         forM_ pages $ \pc@PageConf{..} -> do
-            pageData <- 
+            pageData <-
                 trace (" * Reading data from Wiki page ID: " ++ pageId)
                 getData pageId
             case pageData of
                 Nothing -> liftIO $ putStrLn "!!! Warning: failed to fetch doc, not updating the listings..."
                 Just pageData' -> do
                     table <- parseTable pageData'
-                    forM_ languages $ \lang -> 
+                    forM_ languages $ \lang ->
                         trace (" *     Language: " ++ show lang)
                         renderTable rootDir lang pc table
 
@@ -427,7 +423,7 @@ readOodiNames = do
 
 
 -- TODO: Check what this method does, step by step.
-{- | Get a translated name for a specific 'Course', by looking it up from 
+{- | Get a translated name for a specific 'Course', by looking it up from
     WebOodi.
 -}
 i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to lookup.
@@ -590,7 +586,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         -- if it begins with a number, apply appropriate header ----------------
         ------------------------------------------------------------------------
         
-        -- TODO: Add the function type description to this function as well!      
+        -- TODO: Add the function type description to this function as well!
         {- | Helper function to select the correct HTML-header tag for the
             current 'Category'.
         -}
@@ -816,10 +812,10 @@ getData pageId = do
 
     str <- lift $ case xs of
         "cache" : _ -> Just <$> LT.readFile file
-        "fetch" : _ -> do 
+        "fetch" : _ -> do
                         r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
                         if "<title>Log In" `LT.isInfixOf` r
-                            then 
+                            then
                                 trace (" * Private Wiki Table - Can't read...")
                                 return Nothing
                             else
