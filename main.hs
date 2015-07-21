@@ -572,11 +572,11 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         colLangWidth          = colWidth "colLang"
         colWebsiteWidth       = colWidth "colWebsite"
 
+
         ------------------------------------------------------------------------
-        -- course table --------------------------------------------------------
+        -- course table
         ------------------------------------------------------------------------
 
-        -- TODO: Add the function type description to this function as well!
         {- | Function for generating the nestled @\<div.courses\>@ HTML-tags.
 
             If the maximum number of @categories@ that can be nestled not is
@@ -629,10 +629,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 
 
         ------------------------------------------------------------------------
-        -- if it begins with a number, apply appropriate header ----------------
+        -- if it begins with a number, apply appropriate header
         ------------------------------------------------------------------------
-        
-        -- TODO: Add the function type description to this function as well!
+
         {- | Helper function to select the correct HTML-header tag for the
             current 'Category'.
         -}
@@ -665,8 +664,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
             translation = i18nTranslationOf category
 
         ------------------------------------------------------------------------
-        -- course category div -------------------------------------------------
+        -- course category div
         ------------------------------------------------------------------------
+
         {- | Helper function to select if the HTML-header should be added or if
             the content @\<div.courses\>@ tags should nestled deeper.
             
@@ -683,9 +683,11 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                         #{f groupedRows}
             |]
 
+
         ------------------------------------------------------------------------
-        -- put everything together ---------------------------------------------
+        -- put everything together
         ------------------------------------------------------------------------
+
     in [shamlet|
         \<!-- title: #{lookupLang lang $ pageTitle page} -->
         \<!-- fi (Suomenkielinen versio): #{toUrlPath $ lookupLang "fi" $ pageUrl page} -->
