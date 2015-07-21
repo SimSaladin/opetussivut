@@ -446,6 +446,11 @@ categories:
      - "A. "
      - "B. "
 
+# The default category level when nestling categories.
+categoryLevel: 1
+
+
+
 # Column names in source table. these must align with `toLower real_col`
 colCode:       "koodi" 
 colLang:       "opetuskieli" 

@@ -75,14 +75,6 @@ import           GHC.Generics
 import           Debug.Trace
 
 
--- TODO: hard-coded level switch for "Taso" in categories configuration option
-{- | Used to define the entry level when generating the hierarchial 'Category'
-    list.
--}
-categoryLevelTaso :: Int    -- ^ Return: The hardcoded 'Category' level.
-categoryLevelTaso = 1
-
-
 {- | The entry point of the application.
 
     It reads the /config.yaml/ file into memory before doing anything else.
@@ -170,6 +162,7 @@ data Config   = Config {
               -- Internationalization properties
               , i18n            :: I18N         -- ^ Database with translations.
               -- Wiki Table properties
+              , categoryLevel   :: Int
               , categories      :: [[Text]]     -- ^ List of lists of 'Category's (used to nestle the categories for the 'Course's).
               , colCode         :: Text         -- ^ Column 'Header' for the course code.
               , colLang         :: Text         -- ^ Column 'Header' for the course language.
@@ -227,7 +220,7 @@ type ContentBlock = Text
     does not exist see @'toLang'@ for implementation). Then one will only have
     to lookup up the desired language from the result.
 
-    > Map.lookup [Language] . Map.lookup [Finnish phrase] [I18N database]
+    > Map.lookup [Language] $ Map.lookup [Finnish phrase] [I18N database]
 -}
 type I18N         = Map Text (Map Lang Text)
 
@@ -543,7 +536,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 [shamlet|
                     <table>
                         $forall c <- rows
-                            <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevelTaso c}"
+                            <tr data-taso="#{fromMaybe "" $ catAt cnf categoryLevel c}"
                                 data-kieli="#{getCellContent colLang c}"
                                 data-lukukausi="#{getCellContent colLukukausi c}"
                                 data-pidetaan="#{getCellContent "pidetään" c}">
@@ -674,7 +667,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 #{i18nTranslationOf "Taso"}:&nbsp;
                 <select id="select-taso" name="taso" onchange="updateList(this)">
                     <option value="any" >#{i18nTranslationOf "Kaikki"}
-                    $forall cat <- (categories !! categoryLevelTaso)
+                    $forall cat <- (categories !! categoryLevel)
                         <option value="#{cat}">#{i18nTranslationOf cat}
 
                 #{i18nTranslationOf "Lukukausi"}:&nbsp;
