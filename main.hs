@@ -83,6 +83,13 @@ categoryLevelTaso = 1
 -- | The entry point of the application.
 --
 -- It reads the /config.yaml/ file into memory before doing anything else.
+-- After that it access the page data of the selected page, either from
+-- cache or from the Wiki Table based on the command line arguments used.
+--
+-- When the page data is fetched it starts the 'Table' generation by calling
+-- the @parseTable@ function and later loops over the different 'Lang'uages
+-- found in the /config.yaml/ page configuration section and renders a
+-- different page body for each of the languages.
 main :: IO ()
 main = trace ("============================================================\n" ++
               " Running Application\n" ++

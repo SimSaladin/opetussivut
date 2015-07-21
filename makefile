@@ -112,15 +112,23 @@ run-cache: webapp
 .PHONY: clean
 clean:
 	@ tput setaf 2	# Green text
-	@ echo "Cleaning the folder"
+	@ echo "Cleaning temp files"
 	@ #---------------------------------------------------
 	@ tput setaf 1	# Red text
-	@ rm -r -f -v dist
-	@ rm -r -f -v webapp
 	@ find . -name \*~ -exec rm -v {} +
 	@ #---------------------------------------------------
 	@ tput sgr0		# Reset color
 
+.PHONY: clean-all
+clean-all:
+	@ tput setaf 2  # Green text
+	@ echo "Cleaning all (build files too)"
+	@ #---------------------------------------------------
+	@ tput setaf 1  # Red text
+	@ rm -r -f -v dist
+	@ rm -r -f -v webapp
+	@ #---------------------------------------------------
+	@ tput sgr0		# Reset color
 
 
 
