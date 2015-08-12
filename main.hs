@@ -728,8 +728,8 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 #{i18nTranslationOf "Lukukausi"}:&nbsp;
                 <select id="select-lukukausi" name="lukukausi" onchange="updateList(this)">
                     <option value="any"   >#{i18nTranslationOf "Kaikki"}
-                    <option value="kevät" >#{i18nTranslationOf "Kevät"}
                     <option value="syksy" >#{i18nTranslationOf "Syksy"}
+                    <option value="kevät" >#{i18nTranslationOf "Kevät"}
                     <option value="kesä"  >#{i18nTranslationOf "Kesä"}
 
             <div.headers>
