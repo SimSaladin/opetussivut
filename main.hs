@@ -721,7 +721,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 
                 #{i18nTranslationOf "Taso"}:&nbsp;
                 <select id="select-taso" name="taso" onchange="updateList(this)">
-                    <option value="any" >#{i18nTranslationOf "Kaikki"}
+                    <option value="any">#{i18nTranslationOf "Kaikki"}
                     $forall cat <- (categories !! categoryLevel)
                         <option value="#{cat}">#{i18nTranslationOf cat}
 
@@ -747,7 +747,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         <p>
             #{i18nTranslationOf "Päivitetty"} #{show time}
 
-        <style>
+        <style onload="setDefaultSelectedValues()">
             .buttons {
                 padding:1em;
             }
@@ -832,6 +832,12 @@ jsLogic = [julius|
             }
             xs[i].hidden = hidden;
         }
+    }
+
+    setDefaultSelectedValues = function() {
+        document.getElementById("select-kieli").value = "any";
+        document.getElementById("select-taso").value = "any";
+        document.getElementById("select-lukukausi").value = "any";
     }
 |]
 
