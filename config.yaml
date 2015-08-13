@@ -113,30 +113,38 @@ pages:
 # i18n texts
 ######################################################################
 i18n:
-   "PÄÄAINEOPETUS":
+   "pääaineopetus":
+      fi: "PÄÄAINEOPETUS"
       en: "MAJOR SUBJECT STUDIES"
       se: "HUVUDÄMNESSTUDIER"
-   "SIVUAINEOPETUS":
+   "sivuaineopetus":
+      fi: "SIVUAINEOPETUS"
       en: "MINOR SUBJECT STUDIES"
       se: "BIÄMNESSTUDIER"
 
-   "Perusopinnot":
+   "perusopinnot":
+      fi: "Perusopinnot"
       en: "Basic studies"
       se: "Grundstudier"
-   "Aineopinnot":
+   "aineopinnot":
+      fi: "Aineopinnot"
       en: "Intermediate studies"
       se: "Ämnesstudier"
-   "Syventävät opinnot":
+   "syventävät opinnot":
+      fi: "Syventävät opinnot"
       en: "Advanced studies"
       se: "Avancerade studier"
-   "Muut opinnot":
+   "muut opinnot":
+      fi: "Muut opinnot"
       en: "Other studies"
       se: "Andra studier"
 
-   "Pakolliset opinnot":
+   "pakolliset opinnot":
+      fi: "Pakolliset opinnot"
       en: "Mandatory studies"
       se: "Obligatoriska studier"
-   "Valinnaiset opinnot":
+   "valinnaiset opinnot":
+      fi: "Valinnaiset opinnot"
       en: "Optional studies"
       se: "Valfria studier"
 
@@ -249,57 +257,68 @@ i18n:
             Se föreläsningsperioderna
             [här](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
 
-   "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)":
-      en: "Aerosol and environmental physics"
-      se: "Aerosol- och miljöfysik"
+   "1. aerosoli- ja ympäristöfysiikka (markku kulmala ja antti lauri)":
+      fi: "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)"
+      en: "1. Aerosol and environmental physics"
+      se: "1. Aerosol- och miljöfysik"
 
-   "1. DYNAAMINEN JA FYSIKAALINEN METEOROLOGIA":
+   "1. dynaaminen ja fysikaalinen meteorologia":
       fi: "1. Dynaaminen ja fysikaalinen meteorologia"
       en: "1. Dynamic and physical meteorology"
       se: "1. DYNAMISK OCH FYSIKALISK METEOROLOGI"
 
-   "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)":
+   "2. avaruusfysiikka (emilia kilpua ja hannu koskinen)":
+      fi: "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)"
       en: "2. Space physics"
       se: "2. Rymdfysik"
 
-   "2. MIKROMETEOROLOGIA JA KEMIALLINEN METEOROLOGIA":
+   "2. mikrometeorologia ja kemiallinen meteorologia":
       fi: "2. Mikrometeorologia ja kemiallinen meteorologia"
       en: "2. Micrometeorology and chemical meteorology"
       se: "2. Mikrometeorologi och kemikalisk meteorologi"
 
-   "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)":
+   "3. bio- lääketieteellisen fysiikka (arto annila ja sauli savolainen)":
+      fi: "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)"
       en: "3. Bio-medical physics"
       se: "3. Bio- och medicinsk fysik"
 
-   "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)":
+   "4. elektroniikka ja teollisuussovellukset (edward häggström)":
+      fi: "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)"
       en: "4. Electronics and industry applications"
       se: "4. Elektronik och industritillämpningar"
 
-   "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)":
+   "5. hiukkas- ja ydinfysiikka ja kosmologia (katri huitu ja paula eerola)":
+      fi: "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)"
       en: "5. Particle and nuclear physics, and cosmology"
       se: "5. Partikel- och kärnfysik och kosmologi"
 
-   "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)":
+   "6. laskennallinen fysiikka (kai nordlund ja antti kuronen)":
+      fi: "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)"
       en: "6. Computational physics"
       se: "6. Beräkningsfysik"
 
-   "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)":
+   "7. materiaali- ja nanofysiikka (antti kuronen ja mikko hakala)":
+      fi: "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)"
       en: "7. Material and nano-physics"
       se: "7. Material- och nanofysik"
 
-   "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)":
+   "8. kiinteän maan geofysiikka (ilmo kukkonen ja emilia koivisto)":
+      fi: "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)"
       en: "8. Solid earth geophysics"
       se: "8. Fasta jordens geofysik"
 
-   "A. Ydinaineksen kurssit":
+   "a. ydinaineksen kurssit":
+      fi: "A. Ydinaineksen kurssit"
       en: "A. Core material courses"
       se: "A. Kärnstudiernas kurser"
 
-   "B. Erikoistumiskurssit":
+   "b. erikoistumiskurssit":
+      fi: "B. Erikoistumiskurssit"
       en: "B. Specialization courses"
       se: "B. Specialiseringskurser"
 
-   "B. Ydinainesta täydentävät kurssit":
+   "b. ydinainesta täydentävät kurssit":
+      fi: "B. Ydinainesta täydentävät kurssit"
       en: "B. Core material complementing courses"
       se: "B. Kärnstudiernas fördjupade kurser"
 
@@ -422,13 +441,13 @@ i18n:
 # (the highest categories), the second is a subgroup of the first and so on.
 categories:
    -
-     - "PÄÄAINEOPETUS"
-     - "SIVUAINEOPETUS"
+     - "pääaineopetus"
+     - "sivuaineopetus"
    -
-     - "Perusopinnot"
-     - "Aineopinnot"
-     - "Syventävät opinnot"
-     - "Muut opinnot"
+     - "perusopinnot"
+     - "aineopinnot"
+     - "syventävät opinnot"
+     - "muut opinnot"
    - 
      - "1. "
      - "2. "
@@ -440,11 +459,11 @@ categories:
      - "8. "
      - "9. "
    - 
-     - "Pakolliset opinnot"
-     - "Valinnaiset opinnot"
+     - "pakolliset opinnot"
+     - "valinnaiset opinnot"
    -
-     - "A. "
-     - "B. "
+     - "a. "
+     - "b. "
 
 # The default category level when nestling categories.
 categoryLevel: 1

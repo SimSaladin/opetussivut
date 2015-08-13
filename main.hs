@@ -995,8 +995,8 @@ toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, f
            -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'Text'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
-    guard $ isJust $ L.find (`T.isInfixOf` t) $ concat categories
-    return $ normalize t
+    guard $ isJust $ L.find (`T.isInfixOf` (T.toLower t)) $ concat categories
+    return $ normalize $ T.toLower t
 
 
 {- | Accumulate a 'Category' to a list of 'Category's based on what @categories@
