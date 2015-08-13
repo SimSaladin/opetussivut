@@ -742,12 +742,12 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                         <td style="width:#{colLangWidth}" >#{i18nTranslationOf colLangTitle}
                         <td style="width:#{colWebsiteWidth}">#{i18nTranslationOf colWebsiteTitle}
 
-            #{courseTable 0 $ tail tableContent}
+            #{courseTable 0 $ tableContent}
 
         <p>
             #{i18nTranslationOf "Päivitetty"} #{show time}
 
-        <style onload="setDefaultSelectedValues()">
+        <style>
             .buttons {
                 padding:1em;
             }
@@ -772,6 +772,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                 color:gray;
             }
 
+
         <script type="text/javascript">
             #{preEscapedToHtml $ renderJavascript $ jsLogic undefined}
     |]
@@ -782,6 +783,8 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 -}
 jsLogic :: JavascriptUrl url    -- ^ Return: A link to the different scripts.
 jsLogic = [julius|
+
+    window.history.navigationMode = "compatible";
 
     fs = { };
 
@@ -832,6 +835,10 @@ jsLogic = [julius|
             }
             xs[i].hidden = hidden;
         }
+    }
+
+    onload = function(){
+        setDefaultSelectedValues();
     }
 
     setDefaultSelectedValues = function() {
