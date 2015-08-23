@@ -84,10 +84,11 @@ import           Debug.Trace
     different page body for each of the languages.
 -}
 main :: IO ()
-main = trace ("============================================================\n" ++
-              " Running Application\n" ++
-              "============================================================\n" ++
-              " * Decoding config.yaml")
+main =
+    trace ("============================================================\n" ++
+           " Running Application\n" ++
+           "============================================================\n" ++
+           " * Decoding config.yaml")
     Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
   where
     go = do
@@ -110,8 +111,16 @@ main = trace ("============================================================\n" +
 -- =============================================================================
 
 
--- TODO: Why is it using the three types, ReaderT Config IO
--- | Short hand for the combination of the three types.
+{- | Creates a monad that handles the assignment of the @Config@ type. It uses
+	the functionality of both the @Reader@ monad and the @IO@ monad.
+
+	@ReaderT@ monad transformer
+	@Config@ the return value of @ask@ function
+	@IO@ monad on which the @Reader@ acts.
+
+	By using this monad, one can read all values of type @Config@ and perform
+	IO actions.
+-}
 type M = ReaderT Config IO
 
 
@@ -144,7 +153,8 @@ instance Yaml.FromJSON PageConf
     The 'Config' data type is used to read the configuration properties from
     the /config.yaml/ file. It holds references to all of the different
     property fields and are accessed by their name in the /config.yaml/ file.
-    The fields are filled with a call to the @'ask'@ function.
+    The fields are filled with the type constructor of @Config@ by a call to 
+	the @'ask'@ function through the @M@ monad.
 -}
 data Config   = Config {
               -- File handling properties
@@ -174,7 +184,7 @@ data Table        = Table UTCTime [Header] [Course]
                     deriving (Show, Read)
 
 
-{- | Extension of 'Text'. Used as column 'Header's when reading the source
+{- | Synonym of 'Text'. Used as column 'Header's when reading the source
     'Table'.
 -}
 type Header       = Text
@@ -188,7 +198,7 @@ type Header       = Text
 type Course       = ([Category], Map Header ContentBlock)
 
 
-{- | Extension of 'Text'. First column in source 'Table'. Each 'Course' can
+{- | Synonym of 'Text'. First column in source 'Table'. Each 'Course' can
     have several 'Category's (eg. @Pääaineopinnot@, @Perusopinnot@,
     @Pakolliset@, etc).
 -}
@@ -236,8 +246,8 @@ type ColumnHeader = Map Text (Map Text Text)
     function when creating the body files locally, this way it's possible to
     generate links between the different web pages.
 -}
-toUrlPath :: Text   -- ^ Argument: The URL without /.html/.
-          -> Text   -- ^ Return:   The URL with /.html/ at the end.
+toUrlPath :: Text   -- ^ The URL without /.html/.
+          -> Text   -- ^ The URL with /.html/ at the end.
 toUrlPath  = (<> ".html")
 
 
@@ -249,9 +259,9 @@ toUrlPath  = (<> ".html")
     The PHP-engine used on physics.helsinki.fi utilizes a own /.html/ file
     extension (/.body/) to show HTML output in the center of the page.
 -}
-toFilePath :: FilePath  -- ^ Argument: The root directory.
-           -> Text      -- ^ Argument: The file name.
-           -> FilePath  -- ^ Return:   @root/filename.body@.
+toFilePath :: FilePath  -- ^ The root directory.
+           -> Text      -- ^ The file name.
+           -> FilePath  -- ^ @root/filename.body@.
 toFilePath root = (root <>) . T.unpack . (<> ".body")
 
 
@@ -260,7 +270,7 @@ toFilePath root = (root <>) . T.unpack . (<> ".body")
     WebOodi's HTML is just horrible (imo it's not even HTML), so we use another
     regex to parse it (before the XML parser is used).
 -}
-regexes :: [String -> String]   -- ^ Return: A list of functions for removing HTML-tags
+regexes :: [String -> String]   -- ^ A list of functions for removing HTML-tags
 regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img [^>]*>"
           , rm "<br[^>]*>", rm "<col [^>]*>" ]
   where
@@ -275,10 +285,10 @@ regexes = [ rm "<meta [^>]*>", rm "<link [^>]*>", rm "<link [^>]*\">", rm "<img 
     'Lang'uage in this case is not Finnish it will also warn the user that no
     translation for the selected 'Text' can be found.
 -}
-toLang :: I18N  -- ^ Argument: The 'I18N' database to fetch translations from.
-       -> Lang  -- ^ Argument: The 'Lang'uage to fetch translation for.
-       -> Text  -- ^ Argument: The 'Text' to translate.
-       -> Text  -- ^ Return:   The translation of the input 'Text'.
+toLang :: I18N  -- ^ The 'I18N' database to fetch translations from.
+       -> Lang  -- ^ The 'Lang'uage to fetch translation for.
+       -> Text  -- ^ The 'Text' to translate.
+       -> Text  -- ^ The translation of the input 'Text'.
 toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpack key ++ "'") key)
                            (fromMaybe fallback . Map.lookup lang) (Map.lookup key db)
   where
@@ -293,10 +303,10 @@ toLang db lang key = maybe (trace ("!!! Warning: no i18n db for key `" ++ T.unpa
     doesn't exist it'll show a warning in the output and an empty 'Text' is
     returned instead.
 -}
-columnInfo :: ColumnHeader  -- ^ Argument: The 'ColumnHeader' to look for information in.
-           -> Text          -- ^ Argument: The column information to look for (see /config.yaml/ for alternatives).
-           -> Text          -- ^ Argument: The column name to look for.
-           -> Text          -- ^ Return:   The value of the column information.
+columnInfo :: ColumnHeader  -- ^ The 'ColumnHeader' to look for information in.
+           -> Text          -- ^ The column information to look for (see /config.yaml/ for alternatives).
+           -> Text          -- ^ The column name to look for.
+           -> Text          -- ^ The value of the column information.
 columnInfo db key column = maybe (trace ("!!! Warning: no column in db with name `" ++ T.unpack column ++ "'") column)
                                  (fromMaybe "" . Map.lookup key) (Map.lookup column db)
 
@@ -304,27 +314,27 @@ columnInfo db key column = maybe (trace ("!!! Warning: no column in db with name
 {- | Wrapper function to access the @title@ information of the @column@. Calls
     the @'columnInfo'@ function with \"title\" as the desired information.
 -}
-columnTitle :: ColumnHeader -- ^ Argument: The 'ColumnHeader' to look for information in.
-            -> Text         -- ^ Argument: The column name to look for.
-            -> Text         -- ^ Return:   The value of the column information with key \"title\".
+columnTitle :: ColumnHeader -- ^ The 'ColumnHeader' to look for information in.
+            -> Text         -- ^ The column name to look for.
+            -> Text         -- ^ The value of the column information with key \"title\".
 columnTitle db column = columnInfo db "title" column
 
 
 {- | Wrapper function to access the @width@ information of the @column@. Calls
     the @'columnInfo'@ functio with \"width\" as the desired information.
 -}
-columnWidth :: ColumnHeader -- ^ Argument: The 'ColumnHeader' to look for information in.
-            -> Text         -- ^ Argument: The column name to look for.
-            -> Text         -- ^ Return:   The value of the column information with key \"width\".
+columnWidth :: ColumnHeader -- ^ The 'ColumnHeader' to look for information in.
+            -> Text         -- ^ The column name to look for.
+            -> Text         -- ^ The value of the column information with key \"width\".
 columnWidth db column = columnInfo db "width" column
 
 
 {- | Lookup a translation from any given map, containing 'y' types mapped to
     'Lang' types. It only returns 'Just' values of the result.
 -}
-lookupLang :: Lang      -- ^ Argument: The 'Lang'uage to look for.
-        -> Map Lang y   -- ^ Argument: A map to fetch type 'y' from.
-        -> y            -- ^ Return:   The value of type 'y' found in the map.
+lookupLang :: Lang      -- ^ The 'Lang'uage to look for.
+        -> Map Lang y   -- ^ A map to fetch type 'y' from.
+        -> y            -- ^ The value of type 'y' found in the map.
 lookupLang i = fromJust . Map.lookup i
 
 
@@ -340,8 +350,8 @@ lookupLang i = fromJust . Map.lookup i
     removes some unwanted text completely (cells only containing ' ', ',', '-'
     or '!' characters).
 -}
-normalize :: Text   -- ^ Argument: The 'Text' to normalize.
-          -> Text   -- ^ Result:   The normalized 'Text'.
+normalize :: Text   -- ^ The 'Text' to normalize.
+          -> Text   -- ^ The normalized 'Text'.
 normalize =
     T.dropAround (`elem` " ,-!")
     . T.replace "ILMOITTAUTUMINEN PUUTTUU" ""
@@ -357,8 +367,8 @@ normalize =
     containing the text @tauluotsikko\"?>@ to find the name of the 'Course'. It
     then replaces some sub strings in the 'Course' name with Unicode characters.
 -}
-getOodiName :: Text         -- ^ Argument: 'Text' containing a raw version of the 'Course' name.
-            -> Maybe Text   -- ^ Return:   The Unicode formatted version of the 'Course' name.
+getOodiName :: Text         -- ^ 'Text' containing a raw version of the 'Course' name.
+            -> Maybe Text   -- ^ The Unicode formatted version of the 'Course' name.
 getOodiName =
     fmap (T.pack
           . sub "&aring;" "å"
@@ -391,8 +401,8 @@ getOodiName =
     If another 'Lang'uage than the provided ones is used, the function returns
     an empty 'String' instead of a 'Num'ber.
 -}
-weboodiLang :: Lang     -- ^ Argument: The 'Lang' to use on WebOodi.
-            -> Text     -- ^ Return:   A 'Text' string consisting of the number to switch to in the WebOodi URL.
+weboodiLang :: Lang     -- ^ The 'Lang' to use on WebOodi.
+            -> Text     -- ^ A 'Text' string consisting of the number to switch to in the WebOodi URL.
 weboodiLang lang
             | "fi" <- lang = "1"
             | "se" <- lang = "2"
@@ -407,10 +417,10 @@ weboodiLang lang
     The return value has the form of:
     <https://weboodi.helsinki.fi/hy/opintjakstied.jsp?html=1&Kieli=&Tunniste=[page ID]>.
 -}
-weboodiLink :: Text     -- ^ Argument: The base URL of WebOodi.
-            -> Lang     -- ^ Argument: Language to use on WebOodi.
-            -> Text     -- ^ Argument: WebOodi page ID.
-            -> Text     -- ^ Return:   The concatenated URL.
+weboodiLink :: Text     -- ^ The base URL of WebOodi.
+            -> Lang     -- ^ Language to use on WebOodi.
+            -> Text     -- ^ WebOodi page ID.
+            -> Text     -- ^ The concatenated URL.
 weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
 
@@ -424,7 +434,7 @@ weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
     Initially the 'MVar' is empty.
 -}
-oodiVar :: MVar (Map (Lang, Text) Text) -- ^ Return: A 'MVar' containing a 'Map' between a @('Lang', [WebOodi code])@ and a @[Course name]@.
+oodiVar :: MVar (Map (Lang, Text) Text) -- ^ A 'MVar' containing a 'Map' between a @('Lang', [WebOodi code])@ and a @[Course name]@.
 oodiVar = unsafePerformIO newEmptyMVar
 {-# NOINLINE oodiVar #-}
 {-  If one is using the @unsafePerformIO@ function like this, it is
@@ -441,7 +451,7 @@ oodiVar = unsafePerformIO newEmptyMVar
     If the file exists this function returns a 'Map' of translations for the
     different 'Course' names, otherwise it'll return an empty 'Map'.
 -}
-readOodiNames :: M (Map (Lang, Text) Text)  -- ^ Return: A 'Map' of all the WebOodi translations.
+readOodiNames :: M (Map (Lang, Text) Text)  -- ^ A 'Map' of all the WebOodi translations.
 readOodiNames = do
     Config{..} <- ask
     exists <- liftIO $ doesFileExist oodiNameFile
@@ -454,9 +464,9 @@ readOodiNames = do
 {- | Get a translated name for a specific 'Course', by looking it up from
     WebOodi.
 -}
-i18nCourseNameFromOodi :: Lang              -- ^ Argument: The 'Lang'uage to lookup.
-                       -> Text              -- ^ Argument: The WebOodi page ID.
-                       -> M (Maybe Text)    -- ^ Return:   The translation if found.
+i18nCourseNameFromOodi :: Lang              -- ^ The 'Lang'uage to lookup.
+                       -> Text              -- ^ The WebOodi page ID.
+                       -> M (Maybe Text)    -- ^ The translation if found.
 i18nCourseNameFromOodi lang pageId = do
     Config{..} <- ask
 
@@ -482,8 +492,8 @@ i18nCourseNameFromOodi lang pageId = do
 {- | Reads the web page at the given URL and returns a utf-8 converted version
     of the page. WebOodi is encoded in iso-8859-1 encoding.
 -}
-fetch8859 :: String     -- ^ Argument: URL with iso-8859-1 encoding.
-          -> IO Text    -- ^ Return:   The web page converted to utf-8.
+fetch8859 :: String     -- ^ URL with iso-8859-1 encoding.
+          -> IO Text    -- ^ The web page converted to utf-8.
 fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> simpleHttp url
 
 
@@ -493,11 +503,11 @@ fetch8859 url = LT.toStrict . LT.decodeUtf8 . convert "iso-8859-1" "utf-8" <$> s
 
 
 -- | Create the final HTML version of the web page from the cached one.
-renderTable :: FilePath     -- ^ Argument: The root to where the HTML file should be saved.
-            -> Lang         -- ^ Argument: The currently used language.
-            -> PageConf     -- ^ Argument: More specific information of the current web page being created.
-            -> Table        -- ^ Argument: The source table to use when creating the web page
-            -> M ()         -- ^ Return:   ReaderT Config IO, from the generated HTML file.
+renderTable :: FilePath     -- ^ The root to where the HTML file should be saved.
+            -> Lang         -- ^ The currently used language.
+            -> PageConf     -- ^ More specific information of the current web page being created.
+            -> Table        -- ^ The source table to use when creating the web page
+            -> M ()         -- ^ ReaderT Config IO, from the generated HTML file.
 renderTable root lang pc@PageConf{..} table =
     ask >>= lift . LT.writeFile fp . renderMarkup . tableBody lang pc table
   where
@@ -512,23 +522,23 @@ renderTable root lang pc@PageConf{..} table =
 {- | How to render the data of the selected 'Table' into HTML using WebOodi to
     lookup course names in different languages.
 -}
-tableBody :: Lang           -- ^ Argument: The currently used 'Lang'uage.
-          -> PageConf       -- ^ Argument: More specific information of the current web page being created.
-          -> Table          -- ^ Argument: The source 'Table' to use when creating the web page.
-          -> Config         -- ^ Argument: 'Config'uration containing specific information about the source 'Table' and translation data.
-          -> Html           -- ^ Return:   The generated HTML code.
+tableBody :: Lang           -- ^ The currently used 'Lang'uage.
+          -> PageConf       -- ^ More specific information of the current web page being created.
+          -> Table          -- ^ The source 'Table' to use when creating the web page.
+          -> Config         -- ^ 'Config'uration containing specific information about the source 'Table' and translation data.
+          -> Html           -- ^ The generated HTML code.
 tableBody lang page (Table time _ tableContent) cnf@Config{..} =
     let
         -- | Helper function to get the 'I18N' translation of the input.
-        i18nTranslationOf :: Text   -- ^ Argument: The 'Text' to translate.
-                          -> Text   -- ^ Return:   Translation of the input.
+        i18nTranslationOf :: Text   -- ^ The 'Text' to translate.
+                          -> Text   -- ^ Translation of the input.
         i18nTranslationOf            = toLang i18n lang
 
         {- | Overriding the translations for some 'String's, for usage with the
             /periodi/ column of the 'Table'.
         -}
-        i18nTranslationOfPeriod :: Text     -- ^ Argument: The cell content to be translated.
-                                -> Text     -- ^ Return:   The translation.
+        i18nTranslationOfPeriod :: Text     -- ^ The cell content to be translated.
+                                -> Text     -- ^ The translation.
         i18nTranslationOfPeriod cell
                                 | "?"      <- cell = cell
                                 | "I"      <- cell = cell
@@ -549,8 +559,8 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
                                 | otherwise        = i18nTranslationOf cell
 
         -- | Helper method to fetch a translation of the 'Course' name
-        translateCourseName :: Text         -- ^ Argument: WebOodi course code.
-                            -> Maybe Text   -- ^ Return:   Translation of the 'Course' name.
+        translateCourseName :: Text         -- ^ WebOodi course code.
+                            -> Maybe Text   -- ^ Translation of the 'Course' name.
         translateCourseName     code = unsafePerformIO $
             runReaderT (i18nCourseNameFromOodi lang code) cnf
 
@@ -781,7 +791,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
 {- | Creating the javascript functions of the buttons in the HTML files. Select
     only a specific 'Lang'uage, only a specific level etc.
 -}
-jsLogic :: JavascriptUrl url    -- ^ Return: A link to the different scripts.
+jsLogic :: JavascriptUrl url    -- ^ A link to the different scripts.
 jsLogic = [julius|
 
     window.history.navigationMode = "compatible";
@@ -864,8 +874,8 @@ jsLogic = [julius|
     It returns the stripped HTML document in XML-format, if it can find the
     currently selected Wiki page, otherwise it returns 'Nothing'.
 -}
-getData :: String                   -- ^ Argument: The page ID.
-        -> M (Maybe XML.Document)   -- ^ Return:   The cleaned XML-document, if found any.
+getData :: String                   -- ^ The page ID.
+        -> M (Maybe XML.Document)   -- ^ The cleaned XML-document, if found any.
 getData pageId = do
     Config{..} <- ask
     xs         <- lift getArgs
@@ -894,8 +904,8 @@ getData pageId = do
     Uses the @'XML.decodeHtmlEntities'@ setting to decode the 'LT.Text' into
     XML.
 -}
-cleanAndParse :: LT.Text        -- ^ Argument: The raw 'LT.Text' version of the cached wiki page.
-              -> XML.Document   -- ^ Return:   The XML (HTML) version of the 'LT.Text'.
+cleanAndParse :: LT.Text        -- ^ The raw 'LT.Text' version of the cached wiki page.
+              -> XML.Document   -- ^ The XML (HTML) version of the 'LT.Text'.
 cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT.unpack
   where
     parseSettings = XML.def { XML.psDecodeEntities = XML.decodeHtmlEntities }
@@ -907,8 +917,8 @@ cleanAndParse = XML.parseText_ parseSettings . LT.pack . foldl1 (.) regexes . LT
 
 
 -- | Creates a HTML Table from the cache HTML (in XML format).
-parseTable :: XML.Document  -- ^ Argument: A 'XML.Document' prepared with the @'cleanAndParse'@ function.
-           -> M Table       -- ^ Return:   The parsed 'Table'.
+parseTable :: XML.Document  -- ^ A 'XML.Document' prepared with the @'cleanAndParse'@ function.
+           -> M Table       -- ^ The parsed 'Table'.
 parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
 
 
@@ -916,9 +926,9 @@ parseTable doc = head . catMaybes . findTable (fromDocument doc) <$> ask
     /class/ @confluenceTable@, maps the function @'processTable'@ to the result
     list, and finally returns a list containing the discovered 'Table's.
 -}
-findTable :: Cursor         -- ^ Argument: XML document 'Cursor'.
-          -> Config         -- ^ Argument: Pointer to the /config.yaml/ data.
-          -> [Maybe Table]  -- ^ Return:   List of 'Maybe' 'Table's 
+findTable :: Cursor         -- ^ XML document 'Cursor'.
+          -> Config         -- ^ Pointer to the /config.yaml/ data.
+          -> [Maybe Table]  -- ^ List of 'Maybe' 'Table's 
 findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "confluenceTable" :: [Cursor])
 
 
@@ -938,9 +948,9 @@ findTable c cnf = map ($| processTable cnf) (c $.// attributeIs "class" "conflue
     containing the 'Category' headers when looking at the Wiki Table),
     therefore only the 'tail' of it is necessary.
 -}
-processTable :: Config      -- ^ Argument: Pointer to the /config.yaml/ file.
-             -> Cursor      -- ^ Argument: XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
-             -> Maybe Table -- ^ Return: The processed 'Maybe' 'Table'.
+processTable :: Config      -- ^ Pointer to the /config.yaml/ file.
+             -> Cursor      -- ^ XML document 'Cursor' pointing at @confluenceTable@ /class/ attribute.
+             -> Maybe Table -- ^ The processed 'Maybe' 'Table'.
 processTable cnf c = case cells of
     _ : headersRaw : xs ->
         let headers       = tail (mapMaybe getHeader headersRaw)
@@ -954,19 +964,19 @@ processTable cnf c = case cells of
 {- | Create a 'Maybe' 'Header' type corresponding to the value of the raw
     XML-cell containing information about the 'Header'.
 -}
-getHeader :: Cursor         -- ^ Argument: Pointer to the cell containing information about the 'Header'.
-          -> Maybe Header   -- ^ Return:   A 'Maybe' 'Header' type corresponding to the 'Cursor' value.
+getHeader :: Cursor         -- ^ Pointer to the cell containing information about the 'Header'.
+          -> Maybe Header   -- ^ A 'Maybe' 'Header' type corresponding to the 'Cursor' value.
 getHeader c = return . T.toLower . normalize $ T.unwords (c $// content)
 
 
 {- | A row is either a 'Category' or a 'Course'. The @['Category']@ is used as
     an accumulator.
 -}
-getRow :: Config                        -- ^ Argument: Pointer to the 'Config' for use with the @'toCategory'@ function.
-       -> [Header]                      -- ^ Argument: List of the 'Table' 'Header's.
-       -> [Category]                    -- ^ Argument: A list of 'Category' objects associated with this 'Course'.
-       -> [Cursor]                      -- ^ Argument: The list of unprocessed rows in the 'Table'.
-       -> ([Category], Maybe Course)    -- ^ Return:   A single row, containing 'Category's and the 'Course' data (if any).
+getRow :: Config                        -- ^ Pointer to the 'Config' for use with the @'toCategory'@ function.
+       -> [Header]                      -- ^ List of the 'Table' 'Header's.
+       -> [Category]                    -- ^ A list of 'Category' objects associated with this 'Course'.
+       -> [Cursor]                      -- ^ The list of unprocessed rows in the 'Table'.
+       -> ([Category], Maybe Course)    -- ^ A single row, containing 'Category's and the 'Course' data (if any).
 getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` head (cs !! 1 $| attribute "class")
   where
     go []        _       = (cats, Nothing)
@@ -990,9 +1000,9 @@ getRow cnf@Config{..} headers cats cs = map (T.unwords . ($// content)) cs `go` 
     semester information or empty cells, the function has to exclude those
     cells before checking the 'Category' name.
 -}
-toCategory :: Config            -- ^ Argument: Pointer to the 'Config' object, for accessing the @categories@.
-           -> Text              -- ^ Argument: The cell value from the 'Table'.
-           -> Maybe Category    -- ^ Return:   The name of the 'Category' if it is a category, otherwise an empty 'Text'.
+toCategory :: Config            -- ^ Pointer to the 'Config' object, for accessing the @categories@.
+           -> Text              -- ^ The cell value from the 'Table'.
+           -> Maybe Category    -- ^ The name of the 'Category' if it is a category, otherwise an empty 'Text'.
 toCategory Config{..} t = do
     guard $ t /= "\160" && t /= "syksy" && t /= "kevät"
     guard $ isJust $ L.find (`T.isInfixOf` (T.toLower t)) $ concat categories
@@ -1010,10 +1020,10 @@ toCategory Config{..} t = do
     grab the index in the list of @categories@ for that 'Category' and generate
     the new list of 'Category's for the 'Course'.
 -}
-accumCategory :: Config         -- ^ Argument: Pointer to the 'Config' for access to the @categories@.
-              -> Category       -- ^ Argument: The current 'Category' to check.
-              -> [Category]     -- ^ Argument: The previous 'Category's for the course.
-              -> [Category]     -- ^ Return:   The list containing all 'Category's found for the course this far in the right order.
+accumCategory :: Config         -- ^ Pointer to the 'Config' for access to the @categories@.
+              -> Category       -- ^ The current 'Category' to check.
+              -> [Category]     -- ^ The previous 'Category's for the course.
+              -> [Category]     -- ^ The list containing all 'Category's found for the course this far in the right order.
 accumCategory Config{..} cat cats = case L.findIndex (any (`T.isPrefixOf` cat)) categories of
     Nothing -> error $ "Unknown category: " ++ show cat
     Just i  -> L.deleteFirstsBy T.isPrefixOf cats (f i) ++ [cat]
@@ -1027,12 +1037,12 @@ accumCategory Config{..} cat cats = case L.findIndex (any (`T.isPrefixOf` cat)) 
     This function will return the finished row, containing the separating
     'Category's and the correct 'Course' information from the source 'Table'.
 -}
-toCourse :: Config          -- ^ Argument: The 'Config' to lookup page configuration data from.
-         -> [Category]      -- ^ Argument: A list of 'Category's to pass on to the finished row.
-         -> [Header]        -- ^ Argument: A list of 'Header's to select correct 'Text' from the given list.
-         -> Bool            -- ^ Argument: If 'True' this will make the course available this year.
-         -> [Text]          -- ^ Argument: Used to fill the columns of the row with values from the source 'Table'.
-         -> Course          -- ^ Return:   The finished row.
+toCourse :: Config          -- ^ The 'Config' to lookup page configuration data from.
+         -> [Category]      -- ^ A list of 'Category's to pass on to the finished row.
+         -> [Header]        -- ^ A list of 'Header's to select correct 'Text' from the given list.
+         -> Bool            -- ^ If 'True' this will make the course available this year.
+         -> [Text]          -- ^ Used to fill the columns of the row with values from the source 'Table'.
+         -> Course          -- ^ The finished row.
 toCourse Config{..} cats hs iscur xs =
     (cats, Map.adjust doLang (columnTitle columnHeaders "colLang") $
            Map.adjust doRepeats (columnTitle columnHeaders "colRepeats") $
@@ -1072,8 +1082,8 @@ toCourse Config{..} cats hs iscur xs =
 
         * Replace word separators to single spaces.
 -}
-doLang :: Text      -- ^ Argument: The line of 'Text', that needs conversion.
-       -> Text      -- ^ Return:   The correctly formatted 'Text'.
+doLang :: Text      -- ^ The line of 'Text', that needs conversion.
+       -> Text      -- ^ The correctly formatted 'Text'.
 doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "en"
        . T.replace "ruotsi" "se"
        . T.unwords . T.words
@@ -1084,8 +1094,8 @@ doLang = T.replace "suomi" "fi" . T.replace "eng" "en" . T.replace "englanti" "e
     but numericals or non-alpha characters, it'll return a 'Text' consisting
     of the '-' character. Else it returns the value of the cell.
 -}
-doRepeats :: Text   -- ^ Argument: The 'Text' in the cell of the column.
-          -> Text   -- ^ Return:   The value of 'Text' argument if there isn't any alpha characters in the cell.
+doRepeats :: Text   -- ^ The 'Text' in the cell of the column.
+          -> Text   -- ^ The value of 'Text' argument if there isn't any alpha characters in the cell.
 doRepeats x | T.any isLetter x = "-"
             | otherwise        = x
 
@@ -1095,21 +1105,21 @@ doRepeats x | T.any isLetter x = "-"
     It will compare the 'Text's of them and returns 'True' if both of the
     applied 'Course' arguments have the same text.
 -}
-catGroup :: Config      -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
-         -> Int         -- ^ Argument: 'Category' at level @n@ in /config.yaml/.
-         -> Course      -- ^ Argument: First 'Table' row to compare.
-         -> Course      -- ^ Argument: Second 'Table' row to compare.
-         -> Bool        -- ^ Return:   'True' if the two rows have the same 'Category' 'Text'.
+catGroup :: Config      -- ^ Used to access all available @categories@ from /config.yaml/.
+         -> Int         -- ^ 'Category' at level @n@ in /config.yaml/.
+         -> Course      -- ^ First 'Table' row to compare.
+         -> Course      -- ^ Second 'Table' row to compare.
+         -> Bool        -- ^ 'True' if the two rows have the same 'Category' 'Text'.
 catGroup cnf n = (==) `on` catAt cnf n
 
 
 {- | Returns the value of the first found 'Category' that matches the
     @categories@ at level @n@ in /config.yaml/.
 -}
-catAt :: Config         -- ^ Argument: Used to access all available @categories@ from /config.yaml/.
-      -> Int            -- ^ Argument: 'Category' at level @n@ in /config.yaml/.
-      -> Course         -- ^ Argument: A 'Table' row consisting of only a 'Category' 'Text'.
-      -> Maybe Text     -- ^ Return:   The first found value matching @categories@ at level @n@.
+catAt :: Config         -- ^ Used to access all available @categories@ from /config.yaml/.
+      -> Int            -- ^ 'Category' at level @n@ in /config.yaml/.
+      -> Course         -- ^ A 'Table' row consisting of only a 'Category' 'Text'.
+      -> Maybe Text     -- ^ The first found value matching @categories@ at level @n@.
 catAt Config{..} n (cats, _) =
     case [ c | c <- cats, cr <- categories !! n, cr `T.isPrefixOf` c ] of
         x:_ -> Just x
@@ -1124,9 +1134,9 @@ catAt Config{..} n (cats, _) =
     saying that the /key couldn't be found/, otherwise it returns the value
     of the cell.
 -}
-getCellContent :: Text      -- ^ Argument: The 'Text' to look for in the row consisting of the 'Course' type.
-               -> Course    -- ^ Argument: The row to look in.
-               -> Text      -- ^ Return:   The result 'Text'.
+getCellContent :: Text      -- ^ The 'Text' to look for in the row consisting of the 'Course' type.
+               -> Course    -- ^ The row to look in.
+               -> Text      -- ^ The result 'Text'.
 getCellContent k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "Key not found: " <> k) $ getCellContentMaybe k c
 
 
@@ -1135,9 +1145,9 @@ getCellContent k c = fromMaybe (traceShow ("Key not found" :: String, k, c) $ "K
     Returns 'Nothing' if the key isn't in the row, otherwise it returns the
     value of the cell.
 -}
-getCellContentMaybe :: Text           -- ^ Argument: The 'Text' to look for in the row.
-                    -> Course         -- ^ Argument: The row to look in.
-                    -> Maybe Text     -- ^ Return:   The 'Text' of the cell if it was found otherwise 'Nothing'.
+getCellContentMaybe :: Text           -- ^ The 'Text' to look for in the row.
+                    -> Course         -- ^ The row to look in.
+                    -> Maybe Text     -- ^ The 'Text' of the cell if it was found otherwise 'Nothing'.
 getCellContentMaybe k (_, c) = Map.lookup k c
 
 
