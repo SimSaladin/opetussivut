@@ -68,7 +68,9 @@ import           System.Environment         (getArgs)
 import           System.Exit                (exitFailure)
 import           System.IO.Unsafe           (unsafePerformIO)
 import           GHC.Generics
--- Used to print to the console.
+{- Used to print to the console, during some of the parsing... Other prints are
+   done through the IO monad with the @putStrLn@ function.
+-}
 import           Debug.Trace
 
 
@@ -84,25 +86,24 @@ import           Debug.Trace
     different page body for each of the languages.
 -}
 main :: IO ()
-main =
-    trace ("============================================================\n" ++
-           " Running Application\n" ++
-           "============================================================\n" ++
-           " * Decoding config.yaml")
+main = do
+    putStrLn ("============================================================\n" ++
+              " Running Application\n" ++
+              "============================================================\n" ++
+              " * Decoding config.yaml")
     Yaml.decodeFileEither "config.yaml" >>= either (error . show) (runReaderT go)
   where
     go = do
         Config{..} <- ask
         forM_ pages $ \pc@PageConf{..} -> do
-            pageData <-
-                trace (" * Reading data from Wiki page ID: " ++ pageId)
-                getData pageId
+            liftIO $ putStrLn (" * Reading data from Wiki page ID: " ++ pageId)
+            pageData <- getData pageId
             case pageData of
                 Nothing -> liftIO $ putStrLn "!!! Warning: failed to fetch doc, not updating the listings..."
                 Just pageData' -> do
                     table <- parseTable pageData'
-                    forM_ languages $ \lang ->
-                        trace (" *     Language: " ++ show lang)
+                    forM_ languages $ \lang -> do
+                        liftIO $ putStrLn (" *     Language: " ++ show lang)
                         renderTable rootDir lang pc table
 
 
@@ -424,7 +425,6 @@ weboodiLink :: Text     -- ^ The base URL of WebOodi.
 weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
 
 
--- TODO: What does this do exactly?
 {- | This is a helper function that gives a 'MVar' variable with a @('Lang',
     [WebOodi code])@ mapped to a course name (for that specific 'Lang'uage).
 
@@ -432,7 +432,9 @@ weboodiLink url lang pageId = url <> weboodiLang lang <> "&Tunniste=" <> pageId
     translations. The /oodi.names/ file is generated from accessing the WebOodi
     web page during the fetching process.
 
-    Initially the 'MVar' is empty.
+    Initially the 'MVar' is empty. The 'MVar' variable in this case is used to
+    only have to fill the value once (when reading one of the languages), to
+    save computation time.
 -}
 oodiVar :: MVar (Map (Lang, Text) Text) -- ^ A 'MVar' containing a 'Map' between a @('Lang', [WebOodi code])@ and a @[Course name]@.
 oodiVar = unsafePerformIO newEmptyMVar
@@ -886,11 +888,11 @@ getData pageId = do
         "fetch" : _ -> do
                         r <- LT.decodeUtf8 <$> simpleHttp (fetchUrl ++ pageId)
                         if "<title>Log In" `LT.isInfixOf` r
-                            then
-                                trace (" * Private Wiki Table - Can't read...")
+                            then do
+                                liftIO $ putStrLn (" * Private Wiki Table - Can't read...")
                                 return Nothing
-                            else
-                                trace (" * Writing to file: " ++ file)
+                            else do
+                                liftIO $ putStrLn (" * Writing to file: " ++ file)
                                 LT.writeFile file r >> return (Just r)
         _           -> putStrLn " * Usage: opetussivut <fetch|cache>" >> exitFailure
 
