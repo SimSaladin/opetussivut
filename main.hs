@@ -171,7 +171,7 @@ data Config   = Config {
               , i18n            :: I18N         -- ^ Database with translations.
               -- Wiki Table properties
               , categoryLevel   :: Int
-              , categories      :: [[Text]]     -- ^ List of lists of 'Category's (used to nestle the categories for the 'Course's).
+              , categories      :: [[Text]]     -- ^ List of lists of 'Category's (used to nest the categories for the 'Course's).
               , columnHeaders   :: ColumnHeader -- ^ The @columnHeaders@ section of the /config.yaml/ file.
               , classCur        :: Text         -- ^ HTML class for showing if the course is available this year.
               } deriving Generic
@@ -589,9 +589,9 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         -- course table
         ------------------------------------------------------------------------
 
-        {- | Function for generating the nestled @\<div.courses\>@ HTML-tags.
+        {- | Function for generating the nested @\<div.courses\>@ HTML-tags.
 
-            If the maximum number of @categories@ that can be nestled not is
+            If the maximum number of @categories@ that can be nested not is
             reached it'll continue trying to add 'Category' titles until the
             maximum is reached. After that the 'Table' row is created.
         -}
@@ -680,7 +680,7 @@ tableBody lang page (Table time _ tableContent) cnf@Config{..} =
         ------------------------------------------------------------------------
 
         {- | Helper function to select if the HTML-header should be added or if
-            the content @\<div.courses\>@ tags should nestled deeper.
+            the content @\<div.courses\>@ tags should nested deeper.
             
             Group the 'Table' rows into lists of 'Table' rows based on the
             'Category' they belong to. Then loop over all 'Category' based
