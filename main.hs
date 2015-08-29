@@ -963,7 +963,7 @@ processTable cnf c = case cells of
     cells = map ($/ anyElement) (c $// element "tr")
 
 
-{- | Create a 'Maybe' 'Header' type corresponding to the value of the raw
+{- | Create a value of type 'Maybe' 'Header' corresponding to the value of the raw
     XML-cell containing information about the 'Header'.
 -}
 getHeader :: Cursor         -- ^ Pointer to the cell containing information about the 'Header'.
