@@ -4,7 +4,7 @@
 
 # the website root (/var/www/physics) -- pages (see below) are named as
 # "rootDir/pages.pageUrl[lang]".
-rootDir: "./testi"
+rootDir: "./test"
 #rootDir: "/var/www/physics"
 
 # Where to cache wiki pages. (NO trailing slash)
@@ -38,14 +38,14 @@ languages:
 # - pageUrl: The locations of the page in different languages
 pages:
    -
-      pageId: "133436923"
+      pageId: "155236781"
       pageTitle:
          fi: "Fysiikka"
          se: "Fysik - Undervisning på finska"
          en: "Physics"
       pageUrl:
          fi: "/opetus/kurssit/fysiikka"
-         se: "/svenska/studierna/kurser/fysik_finska"
+         se: "/svenska/opetus/kurssit/fysiikka"
          en: "/english/studying/courses/physics"
    -
       pageId: "133439230"
@@ -55,17 +55,17 @@ pages:
          en: "Physics - Teaching in Swedish"
       pageUrl:
          fi: "/opetus/kurssit/ruotsinkielinen_fysiikka"
-         se: "/svenska/studierna/kurser/fysik_svenska"
+         se: "/svenska/opetus/kurssit/fysik"
          en: "/english/studying/courses/physics_swedish"
    -
       pageId: "133439202"
       pageTitle:
          fi: "Fysiikan opettajankoulutus"
-         se: "Fysik lärare"
+         se: "Fysiklärare"
          en: "Physics teacher"
       pageUrl:
          fi: "/opetus/kurssit/fysiikan_opettajankoulutus"
-         se: "/svenska/studierna/kurser/fysik_larare_undervisning"
+         se: "/svenska/opetus/kurssit/fysiikan_opettajankoulutus"
          en: "/english/studying/courses/physics_teachers"
    -
       pageId: "133439172"
@@ -75,7 +75,7 @@ pages:
          en: "Theoretical physics"
       pageUrl:
          fi: "/opetus/kurssit/teoreettinen_fysiikka"
-         se: "/svenska/studierna/kurser/teoretisk_fysik"
+         se: "/svenska/opetus/kurssit/teoreettinen_fysiikka"
          en: "/english/studying/courses/theoretical_physics"
    -
       pageId: "133439148"
@@ -85,7 +85,7 @@ pages:
          en: "Geophysics"
       pageUrl:
          fi: "/opetus/kurssit/vesivaipan_geofysiikka"
-         se: "/svenska/studierna/kurser/geofysik"
+         se: "/svenska/opetus/kurssit/vesivaipan_geofysiikka"
          en: "/english/studying/courses/geophysics"
    -
       pageId: "133439021"
@@ -95,7 +95,7 @@ pages:
          en: "Meteorology"
       pageUrl:
          fi: "/opetus/kurssit/meteorologia"
-         se: "/svenska/studierna/kurser/meteorologi"
+         se: "/svenska/opetus/kurssit/meteorologia"
          en: "/english/studying/courses/meteorology"
    -
       pageId: "133439114"
@@ -105,32 +105,46 @@ pages:
          en: "Astronomy"
       pageUrl:
          fi: "/opetus/kurssit/tahtitiede"
-         se: "/svenska/studierna/kurser/astronomi"
+         se: "/svenska/opetus/kurssit/tahtitiede"
          en: "/english/studying/courses/astronomy"
-
 
 ######################################################################
 # Internationalisation in output. Map text fragments+language pairs to
 # i18n texts
 ######################################################################
 i18n:
-   "Perusopinnot":
+   "pääaineopetus":
+      fi: "PÄÄAINEOPETUS"
+      en: "MAJOR SUBJECT STUDIES"
+      se: "HUVUDÄMNESSTUDIER"
+   "sivuaineopetus":
+      fi: "SIVUAINEOPETUS"
+      en: "MINOR SUBJECT STUDIES"
+      se: "BIÄMNESSTUDIER"
+
+   "perusopinnot":
+      fi: "Perusopinnot"
       en: "Basic studies"
       se: "Grundstudier"
-   "Aineopinnot":
+   "aineopinnot":
+      fi: "Aineopinnot"
       en: "Intermediate studies"
       se: "Ämnesstudier"
-   "Syventävät opinnot":
+   "syventävät opinnot":
+      fi: "Syventävät opinnot"
       en: "Advanced studies"
-      se: "Advancerade studier"
-   "Muut opinnot":
+      se: "Avancerade studier"
+   "muut opinnot":
+      fi: "Muut opinnot"
       en: "Other studies"
       se: "Andra studier"
 
-   "Pakolliset opinnot":
+   "pakolliset opinnot":
+      fi: "Pakolliset opinnot"
       en: "Mandatory studies"
       se: "Obligatoriska studier"
-   "Valinnaiset opinnot":
+   "valinnaiset opinnot":
+      fi: "Valinnaiset opinnot"
       en: "Optional studies"
       se: "Valfria studier"
 
@@ -160,17 +174,17 @@ i18n:
       en: "Course name"
       se: "Kursnamn"
    "periodi":
-      fi: "Opetusperiodi"
-      en: "Teaching period"
-      se: "Undervisnings period"
+      fi: "Periodi"
+      en: "Period"
+      se: "Period"
    "Lukukausi":
       en: "Semester"
       se: "Termin"
    "op":
       en: "ECTS"
-      se: "ECTS"
+      se: "sp"
    "kotisivu":
-      fi: "Sivu"
+      fi: "Kotisivu"
       en: "Homepage"
       se: "Hemsida"
    "Taso":
@@ -178,8 +192,8 @@ i18n:
       se: "Level"
    "opetuskieli":
       fi: "Opetuskieli"
-      en: "Teaching language"
-      se: "Undervisningsspråk"
+      en: "Language"
+      se: "Språk"
    "väli(vuosia)":
       fi: "Toistuu"
       en: "Interval between courses (years)"
@@ -211,7 +225,7 @@ i18n:
       fi:
          >
             Klikkaa kurssikoodista WebOodiin.
-            Harmaat kurssit eivät ole saatavilla tällä lukukaudella (2014-2015).
+            Harmaat kurssit eivät ole saatavilla tällä lukukaudella (2015-2016).
             Näiden kurssien lisäksi fysiikan laitoksella voi opiskella tiedekunnan yhteisiä opintoja, sivuaineopintoja, ja kieliopintoja jne.
 
             Mikäli tiedot WebOodissa eivät tyydytä, ota yhteyttä luennoitsijaan.
@@ -221,7 +235,7 @@ i18n:
       en:
          >
             Clicking the WebOodi code of the course goes to the study guide ([WebOodi](http://weboodi.helsinki.fi)).
-            Courses grayed out are not available this academic year (2014-2015).
+            Courses grayed out are not available this academic year (2015-2016).
             In addition to these courses there are also faculty courses, courses in minor subjects, language courses etc.
 
             If information on the study guide page is not satisfactory for you, please do not hesitate to contact the lecturer.
@@ -232,7 +246,7 @@ i18n:
       se:
          >
             Klicka på kurskoden för att besöka WebOodi.
-            De gråa kurserna är inte tillgängliga det här läsåret (2014-2015)
+            De gråa kurserna är inte tillgängliga det här läsåret (2015-2016)
             Förutom de här kurserna kan man vid institutionen för fysik även studera
             fakultetens gemensamma studier, biämnesstudier, språkstudier osv.
 
@@ -243,60 +257,180 @@ i18n:
             Se föreläsningsperioderna
             [här](http://www.physics.helsinki.fi/opetus/opetusohjelma/1415/opetusohjelma.html).
 
-   "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)":
-      en: "Aerosol and environmental physics"
-      se: "Aerosol- och miljöfysik"
+   "1. aerosoli- ja ympäristöfysiikka (markku kulmala ja antti lauri)":
+      fi: "1. Aerosoli- ja ympäristöfysiikka (Markku Kulmala ja Antti Lauri)"
+      en: "1. Aerosol and environmental physics"
+      se: "1. Aerosol- och miljöfysik"
 
-   "1. DYNAAMINEN JA FYSIKAALINEN METEOROLOGIA":
+   "1. dynaaminen ja fysikaalinen meteorologia":
       fi: "1. Dynaaminen ja fysikaalinen meteorologia"
       en: "1. Dynamic and physical meteorology"
       se: "1. DYNAMISK OCH FYSIKALISK METEOROLOGI"
 
-   "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)":
+   "2. avaruusfysiikka (emilia kilpua ja hannu koskinen)":
+      fi: "2. Avaruusfysiikka (Emilia Kilpua ja Hannu Koskinen)"
       en: "2. Space physics"
       se: "2. Rymdfysik"
 
-   "2. MIKROMETEOROLOGIA JA KEMIALLINEN METEOROLOGIA":
+   "2. mikrometeorologia ja kemiallinen meteorologia":
       fi: "2. Mikrometeorologia ja kemiallinen meteorologia"
       en: "2. Micrometeorology and chemical meteorology"
       se: "2. Mikrometeorologi och kemikalisk meteorologi"
 
-   "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)":
+   "3. bio- lääketieteellisen fysiikka (arto annila ja sauli savolainen)":
+      fi: "3. Bio- lääketieteellisen fysiikka (Arto Annila ja Sauli Savolainen)"
       en: "3. Bio-medical physics"
       se: "3. Bio- och medicinsk fysik"
 
-   "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)":
+   "4. elektroniikka ja teollisuussovellukset (edward häggström)":
+      fi: "4. Elektroniikka ja teollisuussovellukset (Edward Häggström)"
       en: "4. Electronics and industry applications"
       se: "4. Elektronik och industritillämpningar"
 
-   "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)":
+   "5. hiukkas- ja ydinfysiikka ja kosmologia (katri huitu ja paula eerola)":
+      fi: "5. Hiukkas- ja ydinfysiikka ja kosmologia (Katri Huitu ja Paula Eerola)"
       en: "5. Particle and nuclear physics, and cosmology"
       se: "5. Partikel- och kärnfysik och kosmologi"
 
-   "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)":
+   "6. laskennallinen fysiikka (kai nordlund ja antti kuronen)":
+      fi: "6. Laskennallinen fysiikka (Kai Nordlund ja Antti Kuronen)"
       en: "6. Computational physics"
       se: "6. Beräkningsfysik"
 
-   "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)":
+   "7. materiaali- ja nanofysiikka (antti kuronen ja mikko hakala)":
+      fi: "7. Materiaali- ja nanofysiikka (Antti Kuronen ja Mikko Hakala)"
       en: "7. Material and nano-physics"
       se: "7. Material- och nanofysik"
 
-   "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)":
+   "8. kiinteän maan geofysiikka (ilmo kukkonen ja emilia koivisto)":
+      fi: "8. Kiinteän maan geofysiikka (Ilmo Kukkonen ja Emilia Koivisto)"
       en: "8. Solid earth geophysics"
       se: "8. Fasta jordens geofysik"
 
-   "A. Ydinaineksen kurssit":
+   "a. ydinaineksen kurssit":
+      fi: "A. Ydinaineksen kurssit"
       en: "A. Core material courses"
       se: "A. Kärnstudiernas kurser"
 
-   "B. Erikoistumiskurssit":
+   "b. erikoistumiskurssit":
+      fi: "B. Erikoistumiskurssit"
       en: "B. Specialization courses"
       se: "B. Specialiseringskurser"
 
-   "B. Ydinainesta täydentävät kurssit":
+   "b. ydinainesta täydentävät kurssit":
+      fi: "B. Ydinainesta täydentävät kurssit"
       en: "B. Core material complementing courses"
       se: "B. Kärnstudiernas fördjupade kurser"
 
+   "kevät, kenttä":
+      fi: "Kevät, kenttä"
+      en: "Spring, field"
+      se: "Vår, fält"
+   "syksy, kenttä":
+      fi: "Syksy, kenttä"
+      en: "Autumn, field"
+      se: "Höst, fält"
+   "kesä, kenttä":
+      fi: "Kesä, kenttä"
+      en: "Summer, field"
+      se: "Sommar, fält"
+
+   "tammikuu":
+      fi: "Tammikuu"
+      en: "January"
+      se: "Januari"
+   "helmikuu":
+      fi: "Helmikuu"
+      en: "February"
+      se: "Februari"
+   "maaliskuu":
+      fi: "Maaliskuu"
+      en: "Mars"
+      se: "Mars"
+   "huhtikuu":
+      fi: "Huhtikuu"
+      en: "April"
+      se: "April"
+   "toukokuu":
+      fi: "Toukokuu"
+      en: "May"
+      se: "Maj"
+   "kesäkuu":
+      fi: "Kesäkuu"
+      en: "June"
+      se: "Juni"
+   "heinäkuu":
+      fi: "Heinäkuu"
+      en: "July"
+      se: "Juli"
+   "elokuu":
+      fi: "Elokuu"
+      en: "August"
+      se: "Augusti"
+   "syyskuu":
+      fi: "Syyskuu"
+      en: "September"
+      se: "September"
+   "lokakuu":
+      fi: "Lokakuu"
+      en: "October"
+      se: "Oktober"
+   "marraskuu":
+      fi: "Marraskuu"
+      en: "November"
+      se: "November"
+   "joulukuu":
+      fi: "Joulukuu"
+      en: "December"
+      se: "December"
+
+
+#-------------------------------------------------------------------------------------
+# Fix to remove extra translation not found warning when running script.
+#-------------------------------------------------------------------------------------
+   "1. ":
+      en: "1. "
+      se: "1. "
+   "2. ":
+      en: "2. "
+      se: "2. "
+   "3. ":
+      en: "3. "
+      se: "3. " 
+   "4. ":
+      en: "4. "
+      se: "4. "
+   "5. ":
+      en: "5. "
+      se: "5. "
+   "6. ":
+      en: "6. "
+      se: "6. "
+   "7. ":
+      en: "7. "
+      se: "7. "
+   "8. ":
+      en: "8. "
+      se: "8. "
+   "9. ":
+      en: "9. "
+      se: "9. "
+
+
+#-------------------------------------------------------------------------------------
+# Temporary hotfix to remove extra translation not found warning when running script.
+#-------------------------------------------------------------------------------------
+
+# This is probably a temporary line in the Wiki Table
+   "IV (elokuu 2015, Hyytiälässä?)":
+      en: "IV (August 2015, in Hyytiälä?)"
+      se: "IV (Augusti 2015, i Hyytiälä?)"
+
+# This is probably a spelling error
+   "I -II":
+      fi: "I-II"
+      en: "I-II"
+      se: "I-II"
 
 ######################################################################
 # The wiki table
@@ -307,10 +441,13 @@ i18n:
 # (the highest categories), the second is a subgroup of the first and so on.
 categories:
    -
-     - "Perusopinnot"
-     - "Aineopinnot"
-     - "Syventävät opinnot"
-     - "Muut opinnot"
+     - "pääaineopetus"
+     - "sivuaineopetus"
+   -
+     - "perusopinnot"
+     - "aineopinnot"
+     - "syventävät opinnot"
+     - "muut opinnot"
    - 
      - "1. "
      - "2. "
@@ -322,22 +459,46 @@ categories:
      - "8. "
      - "9. "
    - 
-     - "Pakolliset opinnot"
-     - "Valinnaiset opinnot"
+     - "pakolliset opinnot"
+     - "valinnaiset opinnot"
    -
-     - "A. "
-     - "B. "
+     - "a. "
+     - "b. "
 
-# Column names in source table. these must align with `toLower real_col`
-colCode:       "koodi" 
-colLang:       "opetuskieli" 
-colCourseName: "kurssin nimi" 
-colRepeats:    "väli(vuosia)" 
-colPeriod:     "periodi" 
-colWebsite:    "kotisivu"
+# The default category level when nestling categories.
+categoryLevel: 1
 
-# kevät, kesä, syksy -- NOT actually in the table but generated from colPeriod
-colLukukausi:  "Lukukausi"
+#-------------------------------------------------------------------------------
+# Column headers and specifications. The titles of the different column headers
+# must align with `toLower wikiTableColName`.
+#
+#       Try to get the widths to sum up to 100% in total.
+#       CSS syntax is allowed (%-sign not mandatory)
+#
+# The columns here don't have to come in the same order as presented in the
+# web page.
+#-------------------------------------------------------------------------------
+columnHeaders:
+   colCode:
+       title:   "koodi"
+       width:   "15%"
+   colCourseName:
+       title:   "kurssin nimi"
+       width:   "45%"
+   colPeriod:
+       title:   "periodi"
+       width:   "10%"
+   colRepeats:
+       title:   "väli(vuosia)"
+       width:   "10%"
+   colLang:
+       title:   "opetuskieli"
+       width:   "10%"
+   colWebsite:
+       title:   "kotisivu"
+       width:   "10%"
+
 
 # HTML class of second column td when that course IS arranged this year
 classCur:      "highlight-green"
+
